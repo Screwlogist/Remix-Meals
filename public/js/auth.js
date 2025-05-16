@@ -1,20 +1,16 @@
-// public/js/auth.js
-
 /**
  * Utility functions for handling authentication in the client-side
  */
 
-// Check if user is logged in by checking for token
+// ✅ Check if user is logged in
 function isLoggedIn() {
-    const token = localStorage.getItem('token') || sessionStorage.getItem('token');
-    return !!token;
+    return !!getToken();
 }
 
-// Get current user details
+// ✅ Get the currently logged-in user's info from localStorage/sessionStorage
 function getCurrentUser() {
     const userStr = localStorage.getItem('user') || sessionStorage.getItem('user');
     if (!userStr) return null;
-
     try {
         return JSON.parse(userStr);
     } catch (error) {
@@ -23,56 +19,42 @@ function getCurrentUser() {
     }
 }
 
-// Get authentication token
+// ✅ Get stored token
 function getToken() {
     return localStorage.getItem('token') || sessionStorage.getItem('token');
 }
 
-// Logout user
+// ✅ Clear auth info and logout
 function logout() {
-    // Clear both localStorage and sessionStorage
     localStorage.removeItem('token');
     localStorage.removeItem('user');
     sessionStorage.removeItem('token');
     sessionStorage.removeItem('user');
-
-    // Redirect to landing page
     window.location.href = 'landing.html';
 }
 
-// Add auth headers to fetch requests
+// ✅ Fetch with token (for secure APIs)
 async function authFetch(url, options = {}) {
     const token = getToken();
+    if (!token) throw new Error('Not authenticated');
 
-    if (!token) {
-        throw new Error('No authentication token found');
+    options.headers = {
+        ...(options.headers || {}),
+        Authorization: `Bearer ${token}`,
+        'Content-Type': 'application/json'
+    };
+
+    const response = await fetch(url, options);
+
+    if (response.status === 401 || response.status === 403) {
+        logout(); // Auto-logout if token is invalid
+        throw new Error('Unauthorized');
     }
 
-    // Create headers object if it doesn't exist
-    if (!options.headers) {
-        options.headers = {};
-    }
-
-    // Add authorization header
-    options.headers.Authorization = `Bearer ${token}`;
-
-    try {
-        const response = await fetch(url, options);
-
-        // If unauthorized (token expired or invalid), logout
-        if (response.status === 401) {
-            logout();
-            throw new Error('Session expired. Please login again.');
-        }
-
-        return response;
-    } catch (error) {
-        console.error('Auth fetch error:', error);
-        throw error;
-    }
+    return response;
 }
 
-// Redirect if not logged in - use this on protected pages
+// ✅ Optional: Redirect to login if not authenticated
 function requireAuth() {
     if (!isLoggedIn()) {
         window.location.href = 'login.html';
@@ -81,38 +63,25 @@ function requireAuth() {
     return true;
 }
 
-// Update UI based on auth state
+// ✅ Optional: Update top navigation with login/logout or greeting
 function updateAuthUI() {
     const authButtons = document.querySelector('.auth-buttons');
     if (!authButtons) return;
 
     if (isLoggedIn()) {
         const user = getCurrentUser();
-        const username = user ? user.name : 'User';
+        const username = user?.name || 'User';
 
         authButtons.innerHTML = `
-      <span class="user-greeting">Hello, ${username}</span>
-      <button id="logout-btn" class="auth-btn logout-btn">
-        <i class="material-icons">logout</i>
-        Logout
-      </button>
-    `;
+            <span class="user-greeting">Hello, ${username}</span>
+            <button id="logout-btn" class="btn red">Logout</button>
+        `;
 
-        // Add logout event listener
-        const logoutBtn = document.getElementById('logout-btn');
-        if (logoutBtn) {
-            logoutBtn.addEventListener('click', logout);
-        }
+        document.getElementById('logout-btn').addEventListener('click', logout);
     } else {
         authButtons.innerHTML = `
-      <a href="login.html" class="auth-btn login-btn">
-        <i class="material-icons">login</i>
-        Login
-      </a>
-      <a href="register.html" class="auth-btn signup-btn">
-        <i class="material-icons">person_add</i>
-        Sign Up
-      </a>
-    `;
+            <a href="login.html" class="btn green">Login</a>
+            <a href="register.html" class="btn blue">Sign Up</a>
+        `;
     }
 }

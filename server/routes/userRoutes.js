@@ -47,7 +47,8 @@ router.post('/register', async (req, res) => {
         const userResponse = {
             id: user._id,
             name: user.name,
-            email: user.email
+            email: user.email,
+            isAdmin: user.isAdmin || false
         };
 
         res.status(201).json({
@@ -113,7 +114,8 @@ router.post('/login', async (req, res) => {
         const userResponse = {
             id: user._id,
             name: user.name,
-            email: user.email
+            email: user.email,
+            isAdmin: user.isAdmin || false
         };
 
         res.status(200).json({
@@ -142,7 +144,8 @@ router.get('/me', auth, async (req, res) => {
             data: {
                 id: user._id,
                 name: user.name,
-                email: user.email
+                email: user.email,
+                isAdmin: user.isAdmin || false
             }
         });
     } catch (error) {

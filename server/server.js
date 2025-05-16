@@ -7,15 +7,29 @@ const cookieParser = require('cookie-parser');
 const app = express();
 
 // Connect to MongoDB
+// mongoose.connect('mongodb://localhost:27017/recipefinder', {
+//     useNewUrlParser: true,
+//     useUnifiedTopology: true,
+// })
+//     .then(() => console.log('MongoDB Connected'))
+//     .catch(err => {
+//         console.error('MongoDB Connection Error:', err);
+//         process.exit(1);
+//     });
+
+// Connect to MongoDB
 mongoose.connect('mongodb://localhost:27017/recipefinder', {
     useNewUrlParser: true,
     useUnifiedTopology: true,
 })
-    .then(() => console.log('MongoDB Connected'))
-    .catch(err => {
-        console.error('MongoDB Connection Error:', err);
-        process.exit(1);
-    });
+.then(() => {
+    console.log('MongoDB Connected');
+    //createAdmin(); // 👈 Add this here
+})
+.catch(err => {
+    console.error('MongoDB Connection Error:', err);
+    process.exit(1);
+});
 
 // Middleware
 app.use(express.json());
@@ -30,6 +44,7 @@ app.get('/', (req, res) => {
 // API Routes
 app.use('/api/recipes', require('./routes/recipeRoutes'));
 app.use('/api/users', require('./routes/userRoutes')); // Add user routes
+app.use('/api/admin', require('./routes/adminRoutes')); // Add admin routes
 
 // Serve static files from the public directory
 app.use(express.static(path.join(__dirname, '../public')));
@@ -71,3 +86,30 @@ process.on('unhandledRejection', (err) => {
     // Close server & exit process
     process.exit(1);
 });
+
+
+
+const User = require('./models/User');
+const bcrypt = require('bcryptjs');
+
+// async function createAdmin() {
+//     try {
+//         const existingAdmin = await User.findOne({ email: 'admin@example.com' });
+//         if (existingAdmin) {
+//             console.log('✅ Admin user already exists');
+//             return;
+//         }
+
+//         const hashedPassword = await bcrypt.hash('admin123', 10);
+//         await User.create({
+//             name: 'admin',
+//             email: 'admin@example.com',
+//             password: hashedPassword,
+//             isAdmin: true
+//         });
+
+//         console.log('✅ Admin user created: admin@example.com / admin123');
+//     } catch (err) {
+//         console.error('❌ Error creating admin user:', err.message);
+//     }
+// }

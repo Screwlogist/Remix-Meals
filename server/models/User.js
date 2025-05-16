@@ -26,6 +26,10 @@ const UserSchema = new mongoose.Schema({
         minlength: 6,
         select: false // Don't return password by default
     },
+    isAdmin: { 
+        type: Boolean, 
+        default: false 
+    },
     createdAt: {
         type: Date,
         default: Date.now

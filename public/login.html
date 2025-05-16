@@ -300,9 +300,23 @@
         if (rememberMe) {
           localStorage.setItem('token', data.token);
           localStorage.setItem('user', JSON.stringify(data.user));
+
+          // Check if user is admin
+          if (data.user.isAdmin) {
+              window.location.href = 'admin.html';
+          } else {
+              window.location.href = 'index.html';
+          }
         } else {
           sessionStorage.setItem('token', data.token);
           sessionStorage.setItem('user', JSON.stringify(data.user));
+
+          // Check if user is admin
+          if (data.user.isAdmin) {
+              window.location.href = 'admin.html';
+          } else {
+              window.location.href = 'index.html';
+          }
         }
 
         // Show success message
