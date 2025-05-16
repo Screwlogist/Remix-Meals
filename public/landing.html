@@ -1,0 +1,830 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RemixMeals - Transform Your Leftovers Into Delicious Meals</title>
+    <!-- Materialize CSS -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/materialize/1.0.0/css/materialize.min.css">
+    <!-- Material Icons -->
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <!-- Animate.css for animations -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css">
+    <style>
+        :root {
+            --primary-color: #4caf50;
+            --primary-dark: #388e3c;
+            --secondary-color: #ff9800;
+            --secondary-dark: #f57c00;
+            --text-color: #333;
+            --bg-light: #f9f9f9;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Poppins', sans-serif;
+            color: var(--text-color);
+            background-color: var(--bg-light);
+            overflow-x: hidden;
+        }
+
+        header {
+            padding: 20px 30px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background-color: white;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+            position: fixed;
+            width: 100%;
+            top: 0;
+            z-index: 1000;
+        }
+
+        .logo {
+            display: flex;
+            align-items: center;
+            font-weight: 700;
+            font-size: 1.5rem;
+            color: var(--primary-color);
+        }
+
+        .logo i {
+            margin-right: 10px;
+            font-size: 2rem;
+        }
+
+        .auth-buttons {
+            display: flex;
+            gap: 15px;
+        }
+
+        .auth-btn {
+            padding: 8px 20px;
+            border-radius: 5px;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .auth-btn i {
+            margin-right: 8px;
+        }
+
+        .login-btn {
+            background-color: transparent;
+            border: 2px solid var(--primary-color);
+            color: var(--primary-color);
+        }
+
+        .login-btn:hover {
+            background-color: rgba(76, 175, 80, 0.1);
+        }
+
+        .signup-btn {
+            background-color: var(--primary-color);
+            border: 2px solid var(--primary-color);
+            color: white;
+        }
+
+        .signup-btn:hover {
+            background-color: var(--primary-dark);
+        }
+
+        .hero {
+            height: 100vh;
+            display: flex;
+            align-items: center;
+            padding-top: 60px;
+            background: linear-gradient(rgba(255, 255, 255, 0.9), rgba(255, 255, 255, 0.9)), url('https://images.unsplash.com/photo-1543353071-10c8ba85a904?ixlib=rb-1.2.1&auto=format&fit=crop&w=1350&q=80');
+            background-size: cover;
+            background-position: center;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .hero-content {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 20px;
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .hero-text {
+            flex: 1;
+            max-width: 600px;
+            padding-right: 30px;
+        }
+
+        .hero-text h1 {
+            font-size: 3.5rem;
+            font-weight: 700;
+            line-height: 1.2;
+            margin-bottom: 20px;
+            color: var(--primary-color);
+        }
+
+        .hero-text p {
+            font-size: 1.2rem;
+            line-height: 1.6;
+            margin-bottom: 30px;
+            color: #666;
+        }
+
+        .hero-image {
+            flex: 1;
+            max-width: 500px;
+            position: relative;
+        }
+
+        .hero-image img {
+            width: 100%;
+            border-radius: 20px;
+            box-shadow: 0 15px 30px rgba(0, 0, 0, 0.1);
+            transform: perspective(1000px) rotateY(-10deg);
+            transition: transform 0.5s ease;
+        }
+
+        .hero-image img:hover {
+            transform: perspective(1000px) rotateY(0);
+        }
+
+        .cta-buttons {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 15px;
+        }
+
+        .cta-btn {
+            padding: 12px 30px;
+            font-size: 1rem;
+            font-weight: 600;
+            border-radius: 50px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.3s ease;
+        }
+
+        .cta-btn i {
+            margin-right: 10px;
+        }
+
+        .primary-btn {
+            background-color: var(--primary-color);
+            color: white;
+            box-shadow: 0 4px 15px rgba(76, 175, 80, 0.3);
+        }
+
+        .primary-btn:hover {
+            background-color: var(--primary-dark);
+            transform: translateY(-3px);
+            box-shadow: 0 6px 20px rgba(76, 175, 80, 0.4);
+        }
+
+        .secondary-btn {
+            background-color: var(--secondary-color);
+            color: white;
+            box-shadow: 0 4px 15px rgba(255, 152, 0, 0.3);
+        }
+
+        .secondary-btn:hover {
+            background-color: var(--secondary-dark);
+            transform: translateY(-3px);
+            box-shadow: 0 6px 20px rgba(255, 152, 0, 0.4);
+        }
+
+        .tertiary-btn {
+            background-color: white;
+            color: var(--text-color);
+            border: 2px solid #eee;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
+        }
+
+        .tertiary-btn:hover {
+            background-color: #f5f5f5;
+            transform: translateY(-3px);
+            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.08);
+        }
+
+        .features {
+            padding: 100px 20px;
+            background-color: white;
+        }
+
+        .section-title {
+            text-align: center;
+            margin-bottom: 60px;
+        }
+
+        .section-title h2 {
+            font-size: 2.5rem;
+            font-weight: 700;
+            color: var(--primary-color);
+            margin-bottom: 15px;
+        }
+
+        .section-title p {
+            font-size: 1.1rem;
+            color: #777;
+            max-width: 700px;
+            margin: 0 auto;
+        }
+
+        .features-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 40px;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .feature-card {
+            background-color: #fff;
+            border-radius: 15px;
+            padding: 30px;
+            text-align: center;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.05);
+            transition: all 0.3s ease;
+        }
+
+        .feature-card:hover {
+            transform: translateY(-10px);
+            box-shadow: 0 15px 40px rgba(0, 0, 0, 0.1);
+        }
+
+        .feature-icon {
+            width: 80px;
+            height: 80px;
+            margin: 0 auto 20px;
+            background-color: rgba(76, 175, 80, 0.1);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .feature-icon i {
+            font-size: 2.5rem;
+            color: var(--primary-color);
+        }
+
+        .feature-card h3 {
+            font-size: 1.5rem;
+            font-weight: 600;
+            margin-bottom: 15px;
+            color: var(--text-color);
+        }
+
+        .feature-card p {
+            color: #777;
+            line-height: 1.6;
+        }
+
+        .how-it-works {
+            padding: 100px 20px;
+            background-color: var(--bg-light);
+        }
+
+        .steps {
+            max-width: 900px;
+            margin: 0 auto;
+        }
+
+        .step {
+            display: flex;
+            align-items: flex-start;
+            margin-bottom: 80px;
+            position: relative;
+        }
+
+        .step:last-child {
+            margin-bottom: 0;
+        }
+
+        .step-number {
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            background-color: var(--primary-color);
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+            font-weight: 700;
+            margin-right: 30px;
+            flex-shrink: 0;
+            position: relative;
+            z-index: 2;
+        }
+
+        .step:not(:last-child) .step-number::after {
+            content: '';
+            position: absolute;
+            width: 3px;
+            height: calc(100% + 80px);
+            background-color: rgba(76, 175, 80, 0.2);
+            top: 60px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 1;
+        }
+
+        .step-content h3 {
+            font-size: 1.5rem;
+            font-weight: 600;
+            margin-bottom: 15px;
+            color: var(--text-color);
+        }
+
+        .step-content p {
+            color: #777;
+            line-height: 1.6;
+            margin-bottom: 20px;
+        }
+
+        .step-img {
+            border-radius: 10px;
+            overflow: hidden;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+        }
+
+        .step-img img {
+            width: 100%;
+            display: block;
+        }
+
+        .testimonials {
+            padding: 100px 20px;
+            background-color: white;
+        }
+
+        .testimonials-slider {
+            max-width: 900px;
+            margin: 0 auto;
+        }
+
+        .testimonial {
+            background-color: #fff;
+            border-radius: 15px;
+            padding: 30px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.05);
+            margin: 20px;
+        }
+
+        .testimonial-header {
+            display: flex;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .testimonial-avatar {
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            overflow: hidden;
+            margin-right: 15px;
+        }
+
+        .testimonial-avatar img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .testimonial-info h4 {
+            font-size: 1.2rem;
+            font-weight: 600;
+            margin-bottom: 5px;
+            color: var(--text-color);
+        }
+
+        .testimonial-info p {
+            color: #777;
+            font-size: 0.9rem;
+        }
+
+        .testimonial-rating {
+            color: #ffc107;
+            font-size: 1.2rem;
+            margin-bottom: 10px;
+        }
+
+        .testimonial-text {
+            color: #666;
+            line-height: 1.6;
+            font-style: italic;
+        }
+
+        footer {
+            background-color: #333;
+            color: white;
+            padding: 60px 20px 30px;
+        }
+
+        .footer-content {
+            max-width: 1200px;
+            margin: 0 auto;
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 40px;
+            margin-bottom: 40px;
+        }
+
+        .footer-logo {
+            font-size: 1.8rem;
+            font-weight: 700;
+            margin-bottom: 15px;
+            display: inline-block;
+        }
+
+        .footer-text {
+            color: #bbb;
+            line-height: 1.6;
+            margin-bottom: 20px;
+        }
+
+        .social-links {
+            display: flex;
+            gap: 15px;
+        }
+
+        .social-link {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background-color: rgba(255, 255, 255, 0.1);
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.3s ease;
+        }
+
+        .social-link:hover {
+            background-color: var(--primary-color);
+            transform: translateY(-3px);
+        }
+
+        .footer-title {
+            font-size: 1.2rem;
+            font-weight: 600;
+            margin-bottom: 20px;
+            color: white;
+        }
+
+        .footer-links li {
+            margin-bottom: 10px;
+        }
+
+        .footer-links a {
+            color: #bbb;
+            transition: color 0.3s ease;
+        }
+
+        .footer-links a:hover {
+            color: var(--primary-color);
+        }
+
+        .footer-bottom {
+            text-align: center;
+            padding-top: 30px;
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+            color: #bbb;
+        }
+
+        /* Animations */
+        .animated-element {
+            opacity: 0;
+            transform: translateY(30px);
+            transition: all 0.8s ease;
+        }
+
+        .animated-element.visible {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        /* Floating elements decoration */
+        .floating-elements {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            pointer-events: none;
+            z-index: -1;
+        }
+
+        .floating-element {
+            position: absolute;
+            color: rgba(76, 175, 80, 0.05);
+            animation: float linear infinite;
+        }
+
+        @keyframes float {
+            0% {
+                transform: translateY(100vh) rotate(0deg);
+            }
+            100% {
+                transform: translateY(-100px) rotate(360deg);
+            }
+        }
+
+        /* Responsive styles */
+        @media (max-width: 768px) {
+            .hero {
+                text-align: center;
+                padding-top: 100px;
+            }
+
+            .hero-content {
+                flex-direction: column;
+            }
+
+            .hero-text {
+                padding-right: 0;
+                margin-bottom: 40px;
+            }
+
+            .hero-text h1 {
+                font-size: 2.5rem;
+            }
+
+            .cta-buttons {
+                justify-content: center;
+            }
+
+            .step {
+                flex-direction: column;
+                align-items: center;
+                text-align: center;
+            }
+
+            .step-number {
+                margin-right: 0;
+                margin-bottom: 20px;
+            }
+
+            .step:not(:last-child) .step-number::after {
+                width: 3px;
+                height: calc(100% + 80px);
+                top: 60px;
+            }
+        }
+    </style>
+</head>
+<body>
+<header>
+    <a href="#" class="logo">
+        <i class="material-icons">restaurant</i>
+        RemixMeals
+    </a>
+    <div class="auth-buttons">
+        <a href="login.html" class="auth-btn login-btn">
+            <i class="material-icons">login</i>
+            Login
+        </a>
+        <a href="register.html" class="auth-btn signup-btn">
+            <i class="material-icons">person_add</i>
+            Sign Up
+        </a>
+    </div>
+</header>
+
+<main>
+    <section class="hero">
+        <div class="floating-elements">
+            <i class="material-icons floating-element" style="font-size: 4rem; left: 5%; top: 15%; animation-duration: 20s;">restaurant</i>
+            <i class="material-icons floating-element" style="font-size: 3rem; left: 15%; top: 45%; animation-duration: 18s;">kitchen</i>
+            <i class="material-icons floating-element" style="font-size: 5rem; right: 10%; top: 25%; animation-duration: 22s;">local_dining</i>
+            <i class="material-icons floating-element" style="font-size: 3.5rem; right: 20%; top: 60%; animation-duration: 25s;">set_meal</i>
+        </div>
+
+        <div class="hero-content">
+            <div class="hero-text animated-element">
+                <h1>Transform Leftovers Into Amazing Meals</h1>
+                <p>RemixMeals helps you reduce food waste and save money by creating delicious recipes from ingredients you already have. Simply enter what's in your fridge and discover new meal ideas!</p>
+                <div class="cta-buttons">
+                    <a href="index.html" class="cta-btn primary-btn waves-effect waves-light">
+                        <i class="material-icons">explore</i>
+                        Start Cooking for Free
+                    </a>
+                    <a href="register.html" class="cta-btn secondary-btn waves-effect waves-light">
+                        <i class="material-icons">person_add</i>
+                        Create Account
+                    </a>
+                </div>
+            </div>
+
+            <div class="hero-image animated-element">
+                <img src="https://images.unsplash.com/photo-1546069901-ba9599a7e63c?ixlib=rb-1.2.1&auto=format&fit=crop&w=800&q=80" alt="Delicious recipe made from leftovers">
+            </div>
+        </div>
+    </section>
+
+    <section class="features">
+        <div class="section-title animated-element">
+            <h2>Why RemixMeals?</h2>
+            <p>Our platform offers unique features designed to make cooking with leftover ingredients easy, fun, and sustainable.</p>
+        </div>
+
+        <div class="features-grid">
+            <div class="feature-card animated-element">
+                <div class="feature-icon">
+                    <i class="material-icons">search</i>
+                </div>
+                <h3>Smart Ingredient Search</h3>
+                <p>Simply enter the ingredients you have, and our algorithm will find the perfect recipes for you.</p>
+            </div>
+
+            <div class="feature-card animated-element">
+                <div class="feature-icon">
+                    <i class="material-icons">eco</i>
+                </div>
+                <h3>Reduce Food Waste</h3>
+                <p>Save money and help the environment by using up ingredients before they go bad.</p>
+            </div>
+
+            <div class="feature-card animated-element">
+                <div class="feature-icon">
+                    <i class="material-icons">favorite</i>
+                </div>
+                <h3>Save Your Favorites</h3>
+                <p>Create your personal collection of go-to recipes that you can access anytime.</p>
+            </div>
+        </div>
+    </section>
+
+    <section class="how-it-works">
+        <div class="section-title animated-element">
+            <h2>How It Works</h2>
+            <p>Get started with RemixMeals in just three simple steps.</p>
+        </div>
+
+        <div class="steps">
+            <div class="step animated-element">
+                <div class="step-number">1</div>
+                <div class="step-content">
+                    <h3>Enter Your Ingredients</h3>
+                    <p>Simply type in the ingredients you have in your fridge or pantry. Our smart system recognizes various ingredients and substitutes.</p>
+                    <div class="step-img">
+                        <img src="https://images.unsplash.com/photo-1615485291234-9d694218ddb0?ixlib=rb-1.2.1&auto=format&fit=crop&w=800&q=80" alt="Entering ingredients">
+                    </div>
+                </div>
+            </div>
+
+            <div class="step animated-element">
+                <div class="step-number">2</div>
+                <div class="step-content">
+                    <h3>Discover Recipes</h3>
+                    <p>Browse through a variety of recipe suggestions that match your available ingredients. Filter by meal type, cuisine, or preparation time.</p>
+                    <div class="step-img">
+                        <img src="https://images.unsplash.com/photo-1498837167922-ddd27525d352?ixlib=rb-1.2.1&auto=format&fit=crop&w=800&q=80" alt="Discovering recipes">
+                    </div>
+                </div>
+            </div>
+
+            <div class="step animated-element">
+                <div class="step-number">3</div>
+                <div class="step-content">
+                    <h3>Start Cooking</h3>
+                    <p>Follow the easy step-by-step instructions and transform your leftover ingredients into a delicious meal. Save your favorites for future reference!</p>
+                    <div class="step-img">
+                        <img src="https://images.unsplash.com/photo-1556911220-e15b29be8c8f?ixlib=rb-1.2.1&auto=format&fit=crop&w=800&q=80" alt="Cooking a meal">
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section class="testimonials">
+        <div class="section-title animated-element">
+            <h2>What Our Users Say</h2>
+            <p>Join thousands of home cooks who have discovered the joy of cooking with RemixMeals.</p>
+        </div>
+
+        <div class="testimonials-slider">
+            <div class="testimonial animated-element">
+                <div class="testimonial-header">
+                    <div class="testimonial-avatar">
+                        <img src="https://randomuser.me/api/portraits/women/65.jpg" alt="User avatar">
+                    </div>
+                    <div class="testimonial-info">
+                        <h4>Sarah Johnson</h4>
+                        <p>Home Cook</p>
+                    </div>
+                </div>
+                <div class="testimonial-rating">
+                    ★★★★★
+                </div>
+                <p class="testimonial-text">"RemixMeals has completely changed how I approach cooking. I used to throw away so many ingredients, but now I can turn them into amazing meals. My family is impressed with the variety of dishes I make!"</p>
+            </div>
+        </div>
+    </section>
+</main>
+
+<footer>
+    <div class="footer-content">
+        <div class="footer-col">
+            <a href="#" class="footer-logo">RemixMeals</a>
+            <p class="footer-text">Turn your leftover ingredients into amazing recipes. Reduce food waste and discover new meal ideas.</p>
+            <div class="social-links">
+                <a href="#" class="social-link"><i class="material-icons">facebook</i></a>
+                <a href="#" class="social-link"><i class="material-icons">twitter</i></a>
+                <a href="#" class="social-link"><i class="material-icons">instagram</i></a>
+            </div>
+        </div>
+
+        <div class="footer-col">
+            <h3 class="footer-title">Company</h3>
+            <ul class="footer-links">
+                <li><a href="#">About Us</a></li>
+                <li><a href="#">Our Team</a></li>
+                <li><a href="#">Careers</a></li>
+                <li><a href="#">Contact Us</a></li>
+            </ul>
+        </div>
+
+        <div class="footer-col">
+            <h3 class="footer-title">Resources</h3>
+            <ul class="footer-links">
+                <li><a href="#">Blog</a></li>
+                <li><a href="#">Recipe Tips</a></li>
+                <li><a href="#">Cooking Guides</a></li>
+                <li><a href="#">FAQ</a></li>
+            </ul>
+        </div>
+
+        <div class="footer-col">
+            <h3 class="footer-title">Legal</h3>
+            <ul class="footer-links">
+                <li><a href="#">Terms of Service</a></li>
+                <li><a href="#">Privacy Policy</a></li>
+                <li><a href="#">Cookie Policy</a></li>
+            </ul>
+        </div>
+    </div>
+
+    <div class="footer-bottom">
+        <p>&copy; 2025 RemixMeals. All rights reserved.</p>
+    </div>
+</footer>
+
+<!-- JavaScript -->
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/materialize/1.0.0/js/materialize.min.js"></script>
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Animate elements on scroll
+        const animatedElements = document.querySelectorAll('.animated-element');
+
+        function checkIfInView() {
+            const windowHeight = window.innerHeight;
+            const windowTopPosition = window.scrollY;
+            const windowBottomPosition = windowTopPosition + windowHeight;
+
+            animatedElements.forEach(element => {
+                const elementHeight = element.offsetHeight;
+                const elementTopPosition = element.offsetTop;
+                const elementBottomPosition = elementTopPosition + elementHeight;
+
+                if (
+                    (elementBottomPosition >= windowTopPosition) &&
+                    (elementTopPosition <= windowBottomPosition)
+                ) {
+                    element.classList.add('visible');
+                }
+            });
+        }
+
+        // Set initial state
+        checkIfInView();
+
+        // Listen for scroll event
+        window.addEventListener('scroll', checkIfInView);
+
+        // Show hero elements on page load
+        setTimeout(() => {
+            document.querySelectorAll('.hero .animated-element').forEach(el => {
+                el.classList.add('visible');
+            });
+        }, 300);
+    });
+</script>
+</body>
+</html>

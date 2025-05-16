@@ -35,7 +35,6 @@ router.get('/', async (req, res) => {
         const page = parseInt(req.query.page) || 1;
         const limit = parseInt(req.query.limit) || 12;
         const skip = (page - 1) * limit;
-
         const recipes = await Recipe.find()
             .sort({ createdAt: -1 })
             .skip(skip)
@@ -59,7 +58,7 @@ router.get('/', async (req, res) => {
     }
 });
 
-// GET /api/recipes/search - Search recipes by query
+// GET /api/recipes/search - Search recipes by single ingredient or name
 router.get('/search', async (req, res) => {
     try {
         const query = req.query.q;
@@ -140,6 +139,132 @@ router.get('/search', async (req, res) => {
 
     } catch (error) {
         console.error('Error searching recipes:', error);
+        res.status(500).json({
+            success: false,
+            error: 'Server Error'
+        });
+    }
+});
+
+// GET /api/recipes/search-multi - Search recipes by multiple ingredients
+router.get('/search-multi', async (req, res) => {
+    try {
+        const ingredientsParam = req.query.ingredients;
+
+        if (!ingredientsParam) {
+            return res.status(400).json({
+                success: false,
+                error: 'Please provide at least one ingredient'
+            });
+        }
+
+        // Split comma-separated ingredients
+        const ingredients = ingredientsParam.split(',').map(i => i.trim().toLowerCase());
+
+        if (ingredients.length === 0) {
+            return res.status(400).json({
+                success: false,
+                error: 'Please provide at least one ingredient'
+            });
+        }
+
+        // First search in our database for recipes containing ALL ingredients
+        let recipes = [];
+
+        // Create a query to find recipes containing ALL the provided ingredients
+        const query = {
+            $and: ingredients.map(ingredient => ({
+                'ingredients.name': { $regex: ingredient, $options: 'i' }
+            }))
+        };
+
+        recipes = await Recipe.find(query).limit(12);
+
+        // If we have enough recipes in our database, return them
+        if (recipes.length >= 5) {
+            return res.status(200).json({
+                success: true,
+                count: recipes.length,
+                recipes
+            });
+        }
+
+        // If we don't have enough recipes, try to fetch from external API (TheMealDB)
+        // Note: TheMealDB doesn't support multiple ingredient search directly,
+        // so we'll need to filter the results after fetching
+        try {
+            // We'll search for the first ingredient to get some initial results
+            const firstIngredient = ingredients[0];
+            const mealDbData = await fetchFromMealDb(`filter.php?i=${firstIngredient}`);
+
+            if (mealDbData.meals && mealDbData.meals.length > 0) {
+                // For each result, fetch details to check other ingredients
+                const detailedMeals = [];
+                const mealPromises = [];
+
+                // Limit to checking 15 meals to avoid too many API calls
+                const mealsToCheck = mealDbData.meals.slice(0, 15);
+
+                for (const meal of mealsToCheck) {
+                    mealPromises.push(
+                        fetchFromMealDb(`lookup.php?i=${meal.idMeal}`)
+                            .then(detailData => {
+                                if (detailData.meals && detailData.meals.length > 0) {
+                                    return detailData.meals[0];
+                                }
+                                return null;
+                            })
+                            .catch(() => null)
+                    );
+                }
+
+                const detailedResults = await Promise.all(mealPromises);
+                const validMeals = detailedResults.filter(meal => {
+                    if (!meal) return false;
+
+                    // Check if the meal contains ALL the required ingredients
+                    return ingredients.every(ing => {
+                        for (let i = 1; i <= 20; i++) {
+                            const mealIngredient = meal[`strIngredient${i}`]?.trim().toLowerCase();
+                            if (mealIngredient && mealIngredient.includes(ing)) {
+                                return true;
+                            }
+                        }
+                        return false;
+                    });
+                });
+
+                // Check for existing recipes in the database
+                const existingExternalIds = await Recipe.find({
+                    externalId: { $in: validMeals.map(meal => meal.idMeal) }
+                }).select('externalId');
+
+                const existingIds = new Set(existingExternalIds.map(recipe => recipe.externalId));
+
+                // Filter out recipes we already have
+                const newMealDbRecipes = validMeals.filter(meal => !existingIds.has(meal.idMeal));
+
+                // Return combined results (our DB + filtered external)
+                return res.status(200).json({
+                    success: true,
+                    count: recipes.length + validMeals.length,
+                    recipes: [...recipes, ...validMeals]
+                });
+            }
+        } catch (mealDbError) {
+            console.error('MealDB API Error:', mealDbError);
+            // If MealDB fails, just return what we have from our database
+        }
+
+        // If we got here, either MealDB had no additional results or failed
+        return res.status(200).json({
+            success: true,
+            count: recipes.length,
+            recipes
+        });
+
+    } catch (error) {
+        console.error('Error searching recipes by multiple ingredients:', error);
         res.status(500).json({
             success: false,
             error: 'Server Error'

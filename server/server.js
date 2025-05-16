@@ -1,7 +1,7 @@
-// server/server.js
 const express = require('express');
 const path = require('path');
 const mongoose = require('mongoose');
+const cookieParser = require('cookie-parser');
 
 // Create Express app
 const app = express();
@@ -19,16 +19,24 @@ mongoose.connect('mongodb://localhost:27017/recipefinder', {
 
 // Middleware
 app.use(express.json());
+app.use(cookieParser());
+
+// Define routes BEFORE static files
+// Root route - serve the landing page
+app.get('/', (req, res) => {
+    res.sendFile(path.join(__dirname, '../public', 'landing.html'));
+});
+
+// API Routes
+app.use('/api/recipes', require('./routes/recipeRoutes'));
+app.use('/api/users', require('./routes/userRoutes')); // Add user routes
 
 // Serve static files from the public directory
 app.use(express.static(path.join(__dirname, '../public')));
 
-// API Routes
-app.use('/api/recipes', require('./routes/recipeRoutes'));
-
-// Catch-all route - use middleware approach instead of complex route patterns
-app.use((req, res) => {
-    // If path starts with /api but wasn't handled by the API routes
+// Catch-all route
+app.use((req, res, next) => {
+    // If it's an API route that wasn't handled
     if (req.path.startsWith('/api')) {
         return res.status(404).json({
             success: false,
@@ -36,8 +44,12 @@ app.use((req, res) => {
         });
     }
 
-    // Serve the index.html for all other routes (for SPA)
-    res.sendFile(path.resolve(__dirname, '../public', 'index.html'));
+    // For all other routes, serve the main HTML file
+    if (!req.path.includes('.')) {
+        return res.sendFile(path.join(__dirname, '../public', 'index.html'));
+    }
+
+    next();
 });
 
 // Error handling middleware

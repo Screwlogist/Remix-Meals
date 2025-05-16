@@ -1,53 +1,506 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Recipe Finder</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700&display=swap" rel="stylesheet" />
-  <!-- Added Material Icons -->
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>RemixMeals - Create New Recipes from Leftovers</title>
+  <!-- Materialize CSS -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/materialize/1.0.0/css/materialize.min.css">
+  <!-- Material Icons -->
   <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
-  <link rel="stylesheet" href="style.css" />
+  <!-- Google Fonts -->
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700&display=swap" rel="stylesheet">
+  <!-- Animate.css for additional animations -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css">
+  <link rel="stylesheet" href="style.css">
+  <style>
+    /* Additional styles for animations */
+    .hero-section {
+      background: linear-gradient(135deg, #4caf50 0%, #2e7d32 100%);
+      padding: 50px 20px;
+      margin-bottom: 40px;
+      border-radius: 0 0 30px 30px;
+      box-shadow: 0 8px 20px rgba(0, 0, 0, 0.1);
+      transform: translateY(-5px);
+      transition: transform 0.4s ease-out;
+    }
+
+    .hero-section:hover {
+      transform: translateY(0);
+    }
+
+    .hero-section h1 {
+      color: white;
+      font-size: 3.5rem;
+      margin-bottom: 10px;
+      text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.2);
+    }
+
+    .hero-section .lead {
+      color: rgba(255, 255, 255, 0.9);
+      font-size: 1.4rem;
+      margin-bottom: 20px;
+    }
+
+    .floating {
+      animation: floating 3s ease-in-out infinite;
+    }
+
+    @keyframes floating {
+      0% { transform: translateY(0px); }
+      50% { transform: translateY(-10px); }
+      100% { transform: translateY(0px); }
+    }
+
+    .scale-in-animation {
+      animation: scaleIn 0.5s ease-out;
+    }
+
+    @keyframes scaleIn {
+      0% { transform: scale(0.8); opacity: 0; }
+      100% { transform: scale(1); opacity: 1; }
+    }
+
+    .search-box {
+      transform: translateY(20px);
+      animation: slideUp 0.8s ease-out forwards;
+      animation-delay: 0.2s;
+      opacity: 0;
+    }
+
+    @keyframes slideUp {
+      0% { transform: translateY(20px); opacity: 0; }
+      100% { transform: translateY(0); opacity: 1; }
+    }
+
+    .pulse-button {
+      position: relative;
+      overflow: visible;
+    }
+
+    .pulse-button:after {
+      content: '';
+      display: block;
+      position: absolute;
+      width: 100%;
+      height: 100%;
+      top: 0;
+      left: 0;
+      pointer-events: none;
+      background-image: radial-gradient(circle, #fff 10%, transparent 10.01%);
+      background-repeat: no-repeat;
+      background-position: 50%;
+      transform: scale(10, 10);
+      opacity: 0;
+      transition: transform .3s, opacity .8s;
+    }
+
+    .pulse-button:active:after {
+      transform: scale(0, 0);
+      opacity: .3;
+      transition: 0s;
+    }
+
+    .button-container {
+      animation: fadeIn 1s ease-out forwards;
+      animation-delay: 0.5s;
+      opacity: 0;
+    }
+
+    @keyframes fadeIn {
+      0% { opacity: 0; }
+      100% { opacity: 1; }
+    }
+
+    .recipe-item {
+      transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    }
+
+    .recipe-item:hover {
+      transform: translateY(-10px) scale(1.03);
+    }
+
+    .results-grid {
+      perspective: 1000px;
+    }
+
+    /* Preloader */
+    .preloader-wrapper {
+      margin: 0 auto;
+      display: none;
+    }
+
+    /* App food themed icons */
+    .food-icon {
+      font-size: 2.5rem;
+      margin: 10px;
+      color: var(--primary-color);
+      transition: all 0.3s ease;
+    }
+
+    .food-icon:hover {
+      transform: rotate(20deg);
+      color: var(--secondary-color);
+    }
+
+    /* Tooltip styles */
+    .tooltip {
+      position: relative;
+      display: inline-block;
+    }
+
+    .tooltip .tooltiptext {
+      visibility: hidden;
+      width: 120px;
+      background-color: #333;
+      color: #fff;
+      text-align: center;
+      border-radius: 6px;
+      padding: 5px;
+      position: absolute;
+      z-index: 1;
+      bottom: 125%;
+      left: 50%;
+      margin-left: -60px;
+      opacity: 0;
+      transition: opacity 0.3s;
+    }
+
+    .tooltip:hover .tooltiptext {
+      visibility: visible;
+      opacity: 1;
+    }
+
+    /* Food themed background elements */
+    .bg-elements {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      z-index: -1;
+      opacity: 0.05;
+    }
+
+    .bg-element {
+      position: absolute;
+      font-size: 3rem;
+      animation: float 15s infinite linear;
+    }
+
+    @keyframes float {
+      0% {
+        transform: translateY(100vh) rotate(0deg);
+      }
+      100% {
+        transform: translateY(-100px) rotate(360deg);
+      }
+    }
+
+    /* Fix for button icon alignment */
+    .random-button,
+    .favorites-button {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .random-button i,
+    .favorites-button i {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-right: 8px;
+      /* Remove default icon positioning */
+      float: none !important;
+      margin-left: 0 !important;
+    }
+
+    /* Override Materialize's default .left class */
+    .btn i.left {
+      float: none !important;
+      margin-right: 8px;
+    }
+
+    /* Auth buttons styling */
+    header {
+      padding: 15px 30px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background-color: white;
+      box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+      margin-bottom: 20px;
+    }
+
+    .logo {
+      display: flex;
+      align-items: center;
+      font-weight: 700;
+      font-size: 1.5rem;
+      color: var(--primary-color);
+      text-decoration: none;
+    }
+
+    .logo i {
+      margin-right: 10px;
+      font-size: 2rem;
+    }
+
+    .auth-buttons {
+      display: flex;
+      gap: 15px;
+      align-items: center;
+    }
+
+    .auth-btn {
+      padding: 8px 15px;
+      border-radius: 5px;
+      font-weight: 600;
+      transition: all 0.3s ease;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+    }
+
+    .auth-btn i {
+      margin-right: 8px;
+      display: flex;
+      align-items: center;
+    }
+
+    .login-btn {
+      background-color: transparent;
+      border: 2px solid var(--primary-color);
+      color: var(--primary-color);
+    }
+
+    .login-btn:hover {
+      background-color: rgba(76, 175, 80, 0.1);
+    }
+
+    .signup-btn, .logout-btn {
+      background-color: var(--primary-color);
+      border: 2px solid var(--primary-color);
+      color: white;
+    }
+
+    .signup-btn:hover, .logout-btn:hover {
+      background-color: var(--primary-dark);
+    }
+
+    .user-greeting {
+      font-weight: 600;
+      color: #666;
+      margin-right: 15px;
+    }
+  </style>
 </head>
 <body>
+<!-- Header with auth buttons -->
+<header>
+  <a href="landing.html" class="logo">
+    <i class="material-icons">restaurant</i>
+    RemixMeals
+  </a>
+  <div class="auth-buttons">
+    <!-- This will be dynamically populated by auth.js -->
+  </div>
+</header>
+
+<!-- Background food elements -->
+<div class="bg-elements">
+  <i class="material-icons bg-element" style="left: 10%; animation-duration: 25s; animation-delay: 0s;">restaurant</i>
+  <i class="material-icons bg-element" style="left: 20%; animation-duration: 18s; animation-delay: 2s;">cake</i>
+  <i class="material-icons bg-element" style="left: 35%; animation-duration: 22s; animation-delay: 5s;">local_pizza</i>
+  <i class="material-icons bg-element" style="left: 50%; animation-duration: 20s; animation-delay: 7s;">local_dining</i>
+  <i class="material-icons bg-element" style="left: 65%; animation-duration: 23s; animation-delay: 3s;">bakery_dining</i>
+  <i class="material-icons bg-element" style="left: 80%; animation-duration: 19s; animation-delay: 6s;">lunch_dining</i>
+  <i class="material-icons bg-element" style="left: 90%; animation-duration: 24s; animation-delay: 1s;">emoji_food_beverage</i>
+</div>
+
 <div class="recipe-finder-container">
-  <h1>Recipe Finder</h1>
+  <!-- Hero section with animation -->
+  <div class="hero-section animate__animated animate__fadeIn">
+    <h1 class="floating">RemixMeals</h1>
+    <p class="lead">Turn your leftover ingredients into amazing recipes</p>
+
+    <!-- Food-themed icons -->
+    <div class="food-icons-container">
+      <i class="material-icons food-icon">restaurant</i>
+      <i class="material-icons food-icon">local_dining</i>
+      <i class="material-icons food-icon">bakery_dining</i>
+    </div>
+  </div>
 
   <form id="search-form" class="search-box">
-    <input
-            type="text"
-            id="search-input"
-            placeholder="Search by name (eg. 'carrot')"
-    />
-
-    <button type="submit" id="search-button">Search</button>
+    <div class="ingredients-input-container scale-in-animation">
+      <!-- Multi-ingredient chips input -->
+      <div class="chips chips-placeholder input-field" id="ingredients-chips"></div>
+      <input type="hidden" id="ingredients-hidden" name="ingredients">
+    </div>
+    <button type="submit" id="search-button" class="waves-effect waves-light btn green pulse-button">
+      <i class="material-icons">search</i>
+      <span>Find Recipes</span>
+    </button>
   </form>
 
   <div class="button-container">
-    <button id="random-button" class="random-button">
-      Get Random Recipe
+    <button id="random-button" class="random-button waves-effect waves-light btn orange pulse-button tooltip">
+      <i class="material-icons">shuffle</i>
+      <span>Get Random Recipe</span>
+      <span class="tooltiptext">Discover something new!</span>
     </button>
-    <!-- Added Favorites Button -->
-    <button id="favorites-button" class="favorites-button">
-      My Favorites
+    <button id="favorites-button" class="favorites-button waves-effect waves-light btn green pulse-button tooltip">
+      <i class="material-icons">favorite</i>
+      <span>My Favorites</span>
+      <span class="tooltiptext">Your saved recipes</span>
     </button>
   </div>
 
   <div class="message" id="message-area">
-    Search for a recipe or get a random one!
+    Enter your ingredients to find recipes
+  </div>
+
+  <!-- Preloader for loading states -->
+  <div class="preloader-wrapper big active" id="preloader">
+    <div class="spinner-layer spinner-green-only">
+      <div class="circle-clipper left">
+        <div class="circle"></div>
+      </div>
+      <div class="gap-patch">
+        <div class="circle"></div>
+      </div>
+      <div class="circle-clipper right">
+        <div class="circle"></div>
+      </div>
+    </div>
   </div>
 
   <div class="results-grid" id="results-grid"></div>
 </div>
 
 <div class="modal-container hidden" id="recipe-modal">
-  <div class="modal-content">
+  <div class="modal-content animate__animated animate__zoomIn">
     <button id="modal-close-btn" class="modal-close-btn">+</button>
     <div id="recipe-details-content"></div>
   </div>
 </div>
+
+<!-- JavaScript -->
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/materialize/1.0.0/js/materialize.min.js"></script>
+<script src="js/auth.js"></script>
+<script>
+  // Initialize tooltips and other Materialize components
+  document.addEventListener('DOMContentLoaded', function() {
+    // Initialize any additional Materialize components
+    let elems = document.querySelectorAll('.tooltipped');
+    let instances = M.Tooltip.init(elems, {});
+
+    // Update auth UI when page loads
+    updateAuthUI();
+
+    // Optional: Uncomment this to require authentication for using the app
+    // If you want the "Start Cooking for Free" option, keep this commented
+    // requireAuth();
+
+    // Add animation to recipe items when they appear
+    const animateResults = (entries, observer) => {
+      entries.forEach(entry => {
+        if (entry.isIntersecting) {
+          entry.target.classList.add('animate__animated', 'animate__fadeInUp');
+          observer.unobserve(entry.target);
+        }
+      });
+    };
+
+    // Create the Intersection Observer
+    const observer = new IntersectionObserver(animateResults, {
+      threshold: 0.1
+    });
+
+    // Show preloader when searching
+    const searchForm = document.getElementById('search-form');
+    const preloader = document.getElementById('preloader');
+    const messageArea = document.getElementById('message-area');
+    const resultsGrid = document.getElementById('results-grid');
+
+    if (searchForm) {
+      searchForm.addEventListener('submit', function() {
+        messageArea.style.display = 'none';
+        preloader.style.display = 'block';
+
+        // This is just for visual effect in the enhanced demo
+        // The actual loading is handled by your main.js
+        setTimeout(() => {
+          preloader.style.display = 'none';
+        }, 1500);
+      });
+    }
+
+    // Add animation to the recipe items
+    const originalDisplayRecipes = window.displayRecipes;
+    if (typeof originalDisplayRecipes === 'function') {
+      window.displayRecipes = function(recipes) {
+        originalDisplayRecipes(recipes);
+
+        // Add animation classes to each recipe item
+        const recipeItems = document.querySelectorAll('.recipe-item');
+        recipeItems.forEach((item, index) => {
+          item.classList.add('scale-in-animation');
+          item.style.animationDelay = `${index * 0.1}s`;
+          observer.observe(item);
+        });
+      };
+    }
+
+    // Modify favorites button to use authFetch if user is logged in
+    const favoritesButton = document.getElementById('favorites-button');
+    if (favoritesButton) {
+      favoritesButton.addEventListener('click', async function(e) {
+        e.preventDefault();
+
+        // If user is logged in, use authFetch
+        if (isLoggedIn()) {
+          try {
+            showMessage('Loading your favorite recipes...', false, true);
+            resultsGrid.innerHTML = '';
+
+            if (preloader) {
+              preloader.style.display = 'block';
+            }
+
+            const response = await authFetch('/api/recipes/favorites');
+            const data = await response.json();
+
+            clearMessage();
+
+            if (preloader) {
+              preloader.style.display = 'none';
+            }
+
+            if (data.recipes && data.recipes.length > 0) {
+              displayRecipes(data.recipes);
+            } else {
+              showMessage('You have no favorite recipes yet.', false);
+            }
+          } catch (error) {
+            if (preloader) {
+              preloader.style.display = 'none';
+            }
+            showMessage('Failed to load favorite recipes. Please try again.', true);
+          }
+        } else {
+          // If not logged in, use the original function
+          getFavoriteRecipes();
+        }
+      });
+    }
+  });
+</script>
 <script src="main.js"></script>
 </body>
 </html>
