@@ -109,9 +109,18 @@ modal.addEventListener('click', (e) => {
     }
 });
 
-// API functions
+// API functions with authentication headers
 async function fetchFromApi(endpoint, options = {}) {
     try {
+        // Add authentication headers if user is logged in
+        const token = getToken();
+        if (token) {
+            options.headers = {
+                ...(options.headers || {}),
+                'Authorization': `Bearer ${token}`
+            };
+        }
+
         const response = await fetch(`${BASE_API_URL}${endpoint}`, options);
         if (!response.ok) {
             throw new Error(`HTTP error! Status: ${response.status}`);
@@ -191,6 +200,12 @@ async function getRandomRecipe() {
 }
 
 async function getFavoriteRecipes() {
+    // Check if user is logged in
+    if (!isLoggedIn()) {
+        showMessage('Please log in to view your favorite recipes.', true);
+        return;
+    }
+
     showMessage('Loading your favorite recipes...', false, true);
     resultsGrid.innerHTML = '';
 
@@ -212,14 +227,20 @@ async function getFavoriteRecipes() {
         if (data.recipes && data.recipes.length > 0) {
             displayRecipes(data.recipes);
         } else {
-            showMessage('You have no favorite recipes yet.', false);
+            showMessage('You have no favorite recipes yet. Start adding some by clicking the heart icon on recipes!', false);
         }
     } catch (error) {
         // Hide preloader on error
         if (preloader) {
             preloader.style.display = 'none';
         }
-        showMessage('Failed to load favorite recipes. Please try again.', true);
+
+        // Check if it's an authentication error
+        if (error.message.includes('401')) {
+            showMessage('Please log in to view your favorite recipes.', true);
+        } else {
+            showMessage('Failed to load favorite recipes. Please try again.', true);
+        }
     }
 }
 
@@ -246,62 +267,85 @@ async function getRecipeDetails(id) {
 }
 
 async function toggleFavorite(recipeId, isMealDb = false) {
+    console.log('=== TOGGLE FAVORITE START ===');
+    console.log('Recipe ID:', recipeId);
+    console.log('Is MealDB:', isMealDb);
+
+    // Check if user is logged in
+    if (!isLoggedIn()) {
+        console.log('❌ User not logged in');
+        showMessage('Please log in to add recipes to your favorites.', true);
+        return;
+    }
+
+    console.log('✅ User is logged in');
+
+    // Get current button state
+    const favoriteBtn = document.getElementById('favorite-btn');
+    if (favoriteBtn) {
+        console.log('📍 BEFORE API CALL:');
+        console.log('  - Button text:', favoriteBtn.textContent);
+        console.log('  - Button data-favorite:', favoriteBtn.dataset.favorite);
+        console.log('  - Button expects to:', favoriteBtn.dataset.favorite === 'true' ? 'REMOVE from favorites' : 'ADD to favorites');
+    }
+
     try {
-        let recipe;
+        console.log('🚀 Making API call...');
+        console.log('  - URL:', `/recipes/${recipeId}/favorite`);
+        console.log('  - Method: PUT');
 
-        if (isMealDb) {
-            // This is a MealDB recipe, so we need to save it to our database first
-            const mealDbUrl = `${MEAL_DB_API.LOOKUP}${recipeId}`;
-            const mealDbResponse = await fetch(mealDbUrl);
-            const mealData = await mealDbResponse.json();
+        const response = await fetchFromApi(`/recipes/${recipeId}/favorite`, {
+            method: 'PUT'
+        });
 
-            if (!mealData.meals || !mealData.meals.length) {
-                throw new Error('Recipe not found');
-            }
+        console.log('📦 API Response received:');
+        console.log('  - Success:', response.success);
+        console.log('  - Recipe object:', response.recipe);
+        console.log('  - Recipe isFavorite:', response.recipe?.isFavorite);
 
-            const mealDbRecipe = mealData.meals[0];
+        const recipe = response.recipe;
 
-            // Save to our database
-            const saveResponse = await fetchFromApi('/recipes', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify(transformMealDbToOurFormat(mealDbRecipe))
-            });
-
-            recipe = saveResponse.recipe;
-        } else {
-            // This is already in our database, just toggle favorite
-            const response = await fetchFromApi(`/recipes/${recipeId}/favorite`, {
-                method: 'PUT'
-            });
-
-            recipe = response.recipe;
+        if (!recipe) {
+            console.log('❌ No recipe in response');
+            return;
         }
 
         // Update the favorite button in the modal
-        const favoriteBtn = document.getElementById('favorite-btn');
         if (favoriteBtn) {
-            favoriteBtn.textContent = recipe.isFavorite ? 'Remove from Favorites' : 'Add to Favorites';
-            favoriteBtn.dataset.favorite = recipe.isFavorite ? 'true' : 'false';
-            favoriteBtn.dataset.id = recipe._id;
-            favoriteBtn.dataset.mealdb = 'false';
+            console.log('📍 UPDATING BUTTON:');
+            console.log('  - Recipe isFavorite from server:', recipe.isFavorite);
 
-            // Add animation
-            favoriteBtn.classList.add('animate__animated');
-            favoriteBtn.classList.add(recipe.isFavorite ? 'animate__heartBeat' : 'animate__bounceIn');
+            const newButtonText = recipe.isFavorite ? 'Remove from Favorites' : 'Add to Favorites';
+            const newDataFavorite = recipe.isFavorite ? 'true' : 'false';
 
-            // Remove animation class after it completes
-            setTimeout(() => {
-                favoriteBtn.classList.remove('animate__heartBeat', 'animate__bounceIn');
-            }, 1000);
+            console.log('  - Setting button text to:', newButtonText);
+            console.log('  - Setting data-favorite to:', newDataFavorite);
+
+            favoriteBtn.textContent = newButtonText;
+            favoriteBtn.dataset.favorite = newDataFavorite;
+
+            console.log('📍 AFTER UPDATE:');
+            console.log('  - Button text now:', favoriteBtn.textContent);
+            console.log('  - Button data-favorite now:', favoriteBtn.dataset.favorite);
         }
 
+        // Show success message
+        const message = recipe.isFavorite ? 'Added to favorites!' : 'Removed from favorites!';
+        console.log('💬 Showing message:', message);
+        showMessage(message, false);
+        setTimeout(clearMessage, 2000);
+
+        console.log('=== TOGGLE FAVORITE SUCCESS ===');
         return recipe;
     } catch (error) {
-        console.error('Error toggling favorite:', error);
-        showMessage('Failed to update favorites. Please try again.', true);
+        console.log('=== TOGGLE FAVORITE ERROR ===');
+        console.error('Error details:', error);
+
+        if (error.message.includes('401')) {
+            showMessage('Please log in to manage your favorites.', true);
+        } else {
+            showMessage('Failed to update favorites. Please try again.', true);
+        }
     }
 }
 
@@ -320,6 +364,7 @@ function displayRecipes(recipes) {
         const name = recipe.name || recipe.strMeal;
         const image = recipe.image || recipe.strMealThumb;
         const isMealDb = !!recipe.idMeal;
+        const isFavorite = recipe.isFavorite || false;
 
         const recipeDiv = document.createElement('div');
         recipeDiv.classList.add('recipe-item');
@@ -335,7 +380,7 @@ function displayRecipes(recipes) {
             <div class="card-image">
               <img src="${image}" alt="${name}" loading="lazy">
               <span class="card-title">${name}</span>
-              ${recipe.isFavorite ? '<span class="favorite-badge pulse"><i class="material-icons">favorite</i></span>' : ''}
+              ${isFavorite ? '<span class="favorite-badge pulse"><i class="material-icons">favorite</i></span>' : ''}
             </div>
             <div class="card-content">
               <p>${generateRandomDescription()}</p>
@@ -368,7 +413,7 @@ function displayRecipeDetails(recipe) {
     const videoUrl = recipe.videoUrl || recipe.strYoutube;
     const sourceUrl = recipe.sourceUrl || recipe.strSource;
     const isMealDb = !!recipe.idMeal;
-    const isFavorite = !!recipe.isFavorite;
+    const isFavorite = recipe.isFavorite || false;
 
     let ingredients = [];
 
@@ -425,12 +470,16 @@ function displayRecipeDetails(recipe) {
            </div>`
         : "";
 
-    const favoriteButton = `
-        <button id="favorite-btn" class="favorite-button animate__animated animate__heartBeat" 
-                data-id="${id}" data-mealdb="${isMealDb}" data-favorite="${isFavorite}">
-            ${isFavorite ? 'Remove from Favorites' : 'Add to Favorites'}
-        </button>
-    `;
+    // Only show favorite button if user is logged in
+    let favoriteButton = '';
+    if (isLoggedIn()) {
+        favoriteButton = `
+            <button id="favorite-btn" class="favorite-button animate__animated animate__heartBeat" 
+                    data-id="${id}" data-mealdb="${isMealDb}" data-favorite="${isFavorite}">
+                ${isFavorite ? 'Remove from Favorites' : 'Add to Favorites'}
+            </button>
+        `;
+    }
 
     modalContent.innerHTML = `
         <div class="row">
@@ -466,30 +515,32 @@ function displayRecipeDetails(recipe) {
         </div>
     `;
 
-    // Add event listener for favorite button
+    // Add event listener for favorite button if it exists
     const favoriteBtn = document.getElementById('favorite-btn');
-    favoriteBtn.addEventListener('click', async (e) => {
-        const btn = e.currentTarget;
-        const recipeId = btn.dataset.id;
-        const isMealDb = btn.dataset.mealdb === 'true';
+    if (favoriteBtn) {
+        favoriteBtn.addEventListener('click', async (e) => {
+            const btn = e.currentTarget;
+            const recipeId = btn.dataset.id;
+            const isMealDb = btn.dataset.mealdb === 'true';
 
-        // Add button animation
-        btn.classList.add('animate__animated', 'animate__rubberBand');
+            // Add button animation
+            btn.classList.add('animate__animated', 'animate__rubberBand');
 
-        // Disable button while processing
-        btn.disabled = true;
-        btn.textContent = 'Updating...';
+            // Disable button while processing
+            btn.disabled = true;
+            btn.textContent = 'Updating...';
 
-        await toggleFavorite(recipeId, isMealDb);
+            await toggleFavorite(recipeId, isMealDb);
 
-        // Re-enable button
-        btn.disabled = false;
+            // Re-enable button
+            btn.disabled = false;
 
-        // Remove animation class after it completes
-        setTimeout(() => {
-            btn.classList.remove('animate__rubberBand');
-        }, 1000);
-    });
+            // Remove animation class after it completes
+            setTimeout(() => {
+                btn.classList.remove('animate__rubberBand');
+            }, 1000);
+        });
+    }
 }
 
 function generateRandomDescription() {
@@ -576,7 +627,16 @@ function transformMealDbToOurFormat(mealDbRecipe) {
         videoUrl: mealDbRecipe.strYoutube,
         sourceUrl: mealDbRecipe.strSource,
         ingredients,
-        externalId: mealDbRecipe.idMeal,
-        isFavorite: true // Assume we're saving as favorite
+        externalId: mealDbRecipe.idMeal
     };
+}
+
+// Helper function to get token from auth.js
+function getToken() {
+    return localStorage.getItem('token') || sessionStorage.getItem('token');
+}
+
+// Helper function to check if user is logged in
+function isLoggedIn() {
+    return !!getToken();
 }

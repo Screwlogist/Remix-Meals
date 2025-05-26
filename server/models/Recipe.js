@@ -49,10 +49,7 @@ const RecipeSchema = new mongoose.Schema({
         trim: true,
         index: true
     },
-    isFavorite: {
-        type: Boolean,
-        default: false
-    },
+    // Remove the global isFavorite field since favorites are now user-specific
     createdAt: {
         type: Date,
         default: Date.now

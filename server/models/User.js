@@ -26,10 +26,23 @@ const UserSchema = new mongoose.Schema({
         minlength: 6,
         select: false // Don't return password by default
     },
-    isAdmin: { 
-        type: Boolean, 
-        default: false 
+    isAdmin: {
+        type: Boolean,
+        default: false
     },
+    favorites: [{
+        recipeId: {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: 'Recipe'
+        },
+        externalId: {
+            type: String // For MealDB recipes
+        },
+        addedAt: {
+            type: Date,
+            default: Date.now
+        }
+    }],
     createdAt: {
         type: Date,
         default: Date.now
@@ -58,6 +71,44 @@ UserSchema.methods.getSignedJwtToken = function() {
         { id: this._id },
         process.env.JWT_SECRET || 'mysecretkey',
         { expiresIn: '30d' }
+    );
+};
+
+// Method to add recipe to favorites
+UserSchema.methods.addToFavorites = function(recipeId, externalId = null) {
+    // Check if already in favorites
+    const isAlreadyFavorite = this.favorites.some(fav =>
+        (fav.recipeId && fav.recipeId.toString() === recipeId) ||
+        (fav.externalId && fav.externalId === externalId)
+    );
+
+    if (!isAlreadyFavorite) {
+        this.favorites.push({
+            recipeId: recipeId,
+            externalId: externalId
+        });
+    }
+
+    return this.save();
+};
+
+// Method to remove recipe from favorites
+UserSchema.methods.removeFromFavorites = function(recipeId, externalId = null) {
+    this.favorites = this.favorites.filter(fav =>
+        !(
+            (fav.recipeId && fav.recipeId.toString() === recipeId) ||
+            (fav.externalId && fav.externalId === externalId)
+        )
+    );
+
+    return this.save();
+};
+
+// Method to check if recipe is in favorites
+UserSchema.methods.isFavoriteRecipe = function(recipeId, externalId = null) {
+    return this.favorites.some(fav =>
+        (fav.recipeId && fav.recipeId.toString() === recipeId) ||
+        (fav.externalId && fav.externalId === externalId)
     );
 };
 

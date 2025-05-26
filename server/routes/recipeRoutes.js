@@ -1,31 +1,24 @@
-// server/routes/recipeRoutes.js
+// server/routes/recipeRoutes.js - Updated to work primarily with local database
 const express = require('express');
 const router = express.Router();
 const Recipe = require('../models/Recipe');
-const https = require('https');
+const User = require('../models/User');
+const auth = require('../middleware/auth');
 
-// Helper function to fetch from TheMealDB API
-function fetchFromMealDb(endpoint) {
-    return new Promise((resolve, reject) => {
-        https.get(`https://www.themealdb.com/api/json/v1/1/${endpoint}`, (res) => {
-            let data = '';
+// Helper function to add favorite status to recipes for a specific user
+function addFavoriteStatus(recipes, user) {
+    if (!user) return recipes;
 
-            res.on('data', (chunk) => {
-                data += chunk;
-            });
+    return recipes.map(recipe => {
+        const recipeId = recipe._id;
+        const externalId = recipe.externalId;
 
-            res.on('end', () => {
-                try {
-                    const jsonData = JSON.parse(data);
-                    resolve(jsonData);
-                } catch (e) {
-                    reject(e);
-                }
-            });
+        const isFavorite = user.isFavoriteRecipe(recipeId, externalId);
 
-        }).on('error', (err) => {
-            reject(err);
-        });
+        return {
+            ...recipe.toObject ? recipe.toObject() : recipe,
+            isFavorite
+        };
     });
 }
 
@@ -35,12 +28,30 @@ router.get('/', async (req, res) => {
         const page = parseInt(req.query.page) || 1;
         const limit = parseInt(req.query.limit) || 12;
         const skip = (page - 1) * limit;
-        const recipes = await Recipe.find()
+
+        let recipes = await Recipe.find()
             .sort({ createdAt: -1 })
             .skip(skip)
             .limit(limit);
 
         const total = await Recipe.countDocuments();
+
+        // If user is authenticated, add favorite status
+        let user = null;
+        if (req.headers.authorization) {
+            try {
+                const jwt = require('jsonwebtoken');
+                const token = req.headers.authorization.split(' ')[1];
+                const decoded = jwt.verify(token, process.env.JWT_SECRET || 'mysecretkey');
+                user = await User.findById(decoded.id);
+            } catch (err) {
+                // If token is invalid, continue without user context
+            }
+        }
+
+        if (user) {
+            recipes = addFavoriteStatus(recipes, user);
+        }
 
         res.status(200).json({
             success: true,
@@ -70,19 +81,30 @@ router.get('/search', async (req, res) => {
             });
         }
 
-        // First search in our database
+        // Get user context for favorites
+        let user = null;
+        if (req.headers.authorization) {
+            try {
+                const jwt = require('jsonwebtoken');
+                const token = req.headers.authorization.split(' ')[1];
+                const decoded = jwt.verify(token, process.env.JWT_SECRET || 'mysecretkey');
+                user = await User.findById(decoded.id);
+            } catch (err) {
+                // Continue without user context
+            }
+        }
+
+        // Search in our local database
         let recipes = [];
 
         if (query.length >= 2) {
             recipes = await Recipe.find(
                 { $text: { $search: query } },
-                // Add relevance score
                 { score: { $meta: "textScore" } }
             )
                 .sort({ score: { $meta: "textScore" } })
-                .limit(12);
+                .limit(20);
         } else {
-            // For very short queries, use regex instead
             recipes = await Recipe.find({
                 $or: [
                     { name: new RegExp(query, 'i') },
@@ -90,47 +112,14 @@ router.get('/search', async (req, res) => {
                     { cuisine: new RegExp(query, 'i') },
                     { 'ingredients.name': new RegExp(query, 'i') }
                 ]
-            }).limit(12);
+            }).limit(20);
         }
 
-        // If we have enough recipes in our database, return them
-        if (recipes.length >= 5) {
-            return res.status(200).json({
-                success: true,
-                count: recipes.length,
-                recipes
-            });
+        // Add favorite status if user is authenticated
+        if (user) {
+            recipes = addFavoriteStatus(recipes, user);
         }
 
-        // If we don't have enough recipes, try to fetch from external API (TheMealDB)
-        try {
-            const mealDbData = await fetchFromMealDb(`search.php?s=${query}`);
-
-            if (mealDbData.meals && mealDbData.meals.length > 0) {
-                // For each MealDB result, check if we already have it in our database
-                const mealDbRecipes = mealDbData.meals;
-                const existingExternalIds = await Recipe.find({
-                    externalId: { $in: mealDbRecipes.map(meal => meal.idMeal) }
-                }).select('externalId');
-
-                const existingIds = new Set(existingExternalIds.map(recipe => recipe.externalId));
-
-                // Filter out recipes we already have
-                const newMealDbRecipes = mealDbRecipes.filter(meal => !existingIds.has(meal.idMeal));
-
-                // Return combined results (our DB + external)
-                return res.status(200).json({
-                    success: true,
-                    count: recipes.length + mealDbRecipes.length,
-                    recipes: [...recipes, ...mealDbRecipes]
-                });
-            }
-        } catch (mealDbError) {
-            console.error('MealDB API Error:', mealDbError);
-            // If MealDB fails, just return what we have from our database
-        }
-
-        // If we got here, either MealDB had no additional results or failed
         return res.status(200).json({
             success: true,
             count: recipes.length,
@@ -158,7 +147,6 @@ router.get('/search-multi', async (req, res) => {
             });
         }
 
-        // Split comma-separated ingredients
         const ingredients = ingredientsParam.split(',').map(i => i.trim().toLowerCase());
 
         if (ingredients.length === 0) {
@@ -168,95 +156,50 @@ router.get('/search-multi', async (req, res) => {
             });
         }
 
-        // First search in our database for recipes containing ALL ingredients
-        let recipes = [];
+        // Get user context for favorites
+        let user = null;
+        if (req.headers.authorization) {
+            try {
+                const jwt = require('jsonwebtoken');
+                const token = req.headers.authorization.split(' ')[1];
+                const decoded = jwt.verify(token, process.env.JWT_SECRET || 'mysecretkey');
+                user = await User.findById(decoded.id);
+            } catch (err) {
+                // Continue without user context
+            }
+        }
 
-        // Create a query to find recipes containing ALL the provided ingredients
+        // Search in our local database for recipes containing ALL ingredients
         const query = {
             $and: ingredients.map(ingredient => ({
                 'ingredients.name': { $regex: ingredient, $options: 'i' }
             }))
         };
 
-        recipes = await Recipe.find(query).limit(12);
+        let recipes = await Recipe.find(query).limit(20);
 
-        // If we have enough recipes in our database, return them
-        if (recipes.length >= 5) {
-            return res.status(200).json({
-                success: true,
-                count: recipes.length,
-                recipes
-            });
+        // If not enough results, try searching for recipes with ANY of the ingredients
+        if (recipes.length < 5) {
+            const orQuery = {
+                $or: ingredients.map(ingredient => ({
+                    'ingredients.name': { $regex: ingredient, $options: 'i' }
+                }))
+            };
+
+            const additionalRecipes = await Recipe.find(orQuery)
+                .limit(20 - recipes.length);
+
+            // Remove duplicates and combine
+            const existingIds = new Set(recipes.map(r => r._id.toString()));
+            const newRecipes = additionalRecipes.filter(r => !existingIds.has(r._id.toString()));
+            recipes = [...recipes, ...newRecipes];
         }
 
-        // If we don't have enough recipes, try to fetch from external API (TheMealDB)
-        // Note: TheMealDB doesn't support multiple ingredient search directly,
-        // so we'll need to filter the results after fetching
-        try {
-            // We'll search for the first ingredient to get some initial results
-            const firstIngredient = ingredients[0];
-            const mealDbData = await fetchFromMealDb(`filter.php?i=${firstIngredient}`);
-
-            if (mealDbData.meals && mealDbData.meals.length > 0) {
-                // For each result, fetch details to check other ingredients
-                const detailedMeals = [];
-                const mealPromises = [];
-
-                // Limit to checking 15 meals to avoid too many API calls
-                const mealsToCheck = mealDbData.meals.slice(0, 15);
-
-                for (const meal of mealsToCheck) {
-                    mealPromises.push(
-                        fetchFromMealDb(`lookup.php?i=${meal.idMeal}`)
-                            .then(detailData => {
-                                if (detailData.meals && detailData.meals.length > 0) {
-                                    return detailData.meals[0];
-                                }
-                                return null;
-                            })
-                            .catch(() => null)
-                    );
-                }
-
-                const detailedResults = await Promise.all(mealPromises);
-                const validMeals = detailedResults.filter(meal => {
-                    if (!meal) return false;
-
-                    // Check if the meal contains ALL the required ingredients
-                    return ingredients.every(ing => {
-                        for (let i = 1; i <= 20; i++) {
-                            const mealIngredient = meal[`strIngredient${i}`]?.trim().toLowerCase();
-                            if (mealIngredient && mealIngredient.includes(ing)) {
-                                return true;
-                            }
-                        }
-                        return false;
-                    });
-                });
-
-                // Check for existing recipes in the database
-                const existingExternalIds = await Recipe.find({
-                    externalId: { $in: validMeals.map(meal => meal.idMeal) }
-                }).select('externalId');
-
-                const existingIds = new Set(existingExternalIds.map(recipe => recipe.externalId));
-
-                // Filter out recipes we already have
-                const newMealDbRecipes = validMeals.filter(meal => !existingIds.has(meal.idMeal));
-
-                // Return combined results (our DB + filtered external)
-                return res.status(200).json({
-                    success: true,
-                    count: recipes.length + validMeals.length,
-                    recipes: [...recipes, ...validMeals]
-                });
-            }
-        } catch (mealDbError) {
-            console.error('MealDB API Error:', mealDbError);
-            // If MealDB fails, just return what we have from our database
+        // Add favorite status if user is authenticated
+        if (user) {
+            recipes = addFavoriteStatus(recipes, user);
         }
 
-        // If we got here, either MealDB had no additional results or failed
         return res.status(200).json({
             success: true,
             count: recipes.length,
@@ -275,42 +218,44 @@ router.get('/search-multi', async (req, res) => {
 // GET /api/recipes/random - Get a random recipe
 router.get('/random', async (req, res) => {
     try {
-        // Count total number of recipes
+        // Get user context for favorites
+        let user = null;
+        if (req.headers.authorization) {
+            try {
+                const jwt = require('jsonwebtoken');
+                const token = req.headers.authorization.split(' ')[1];
+                const decoded = jwt.verify(token, process.env.JWT_SECRET || 'mysecretkey');
+                user = await User.findById(decoded.id);
+            } catch (err) {
+                // Continue without user context
+            }
+        }
+
+        // Get a random recipe from our local database
         const count = await Recipe.countDocuments();
 
-        // If we have recipes in our database, get a random one
-        if (count > 0) {
-            const random = Math.floor(Math.random() * count);
-            const recipe = await Recipe.findOne().skip(random);
-
-            return res.status(200).json({
-                success: true,
-                recipe
-            });
-        }
-
-        // If no recipes in our database, get from MealDB
-        try {
-            const mealDbData = await fetchFromMealDb('random.php');
-
-            if (mealDbData.meals && mealDbData.meals.length > 0) {
-                return res.status(200).json({
-                    success: true,
-                    meals: mealDbData.meals
-                });
-            } else {
-                return res.status(404).json({
-                    success: false,
-                    error: 'No recipes found'
-                });
-            }
-        } catch (mealDbError) {
-            console.error('MealDB API Error:', mealDbError);
-            return res.status(500).json({
+        if (count === 0) {
+            return res.status(404).json({
                 success: false,
-                error: 'Error fetching from external API'
+                error: 'No recipes found. Please run the import script first.'
             });
         }
+
+        const random = Math.floor(Math.random() * count);
+        let recipe = await Recipe.findOne().skip(random);
+
+        // Add favorite status if user is authenticated
+        if (user) {
+            recipe = {
+                ...recipe.toObject(),
+                isFavorite: user.isFavoriteRecipe(recipe._id, recipe.externalId)
+            };
+        }
+
+        return res.status(200).json({
+            success: true,
+            recipe
+        });
     } catch (error) {
         console.error('Error getting random recipe:', error);
         res.status(500).json({
@@ -320,16 +265,48 @@ router.get('/random', async (req, res) => {
     }
 });
 
-// GET /api/recipes/favorites - Get favorite recipes
-router.get('/favorites', async (req, res) => {
+// GET /api/recipes/favorites - Get user's favorite recipes (PROTECTED ROUTE)
+router.get('/favorites', auth, async (req, res) => {
     try {
-        const recipes = await Recipe.find({ isFavorite: true })
-            .sort({ updatedAt: -1 });
+        const user = await User.findById(req.user.id).populate('favorites.recipeId');
+
+        if (!user) {
+            return res.status(404).json({
+                success: false,
+                error: 'User not found'
+            });
+        }
+
+        // Get all favorite recipes (both internal and by external ID)
+        const favoriteRecipes = [];
+
+        for (const fav of user.favorites) {
+            let recipe = null;
+
+            if (fav.recipeId) {
+                // Internal recipe
+                recipe = fav.recipeId;
+            } else if (fav.externalId) {
+                // Find by external ID
+                recipe = await Recipe.findOne({ externalId: fav.externalId });
+            }
+
+            if (recipe) {
+                favoriteRecipes.push({
+                    ...recipe.toObject(),
+                    isFavorite: true,
+                    addedAt: fav.addedAt
+                });
+            }
+        }
+
+        // Sort by addedAt date (most recent first)
+        favoriteRecipes.sort((a, b) => new Date(b.addedAt) - new Date(a.addedAt));
 
         res.status(200).json({
             success: true,
-            count: recipes.length,
-            recipes
+            count: favoriteRecipes.length,
+            recipes: favoriteRecipes
         });
     } catch (error) {
         console.error('Error getting favorite recipes:', error);
@@ -340,60 +317,45 @@ router.get('/favorites', async (req, res) => {
     }
 });
 
-// GET /api/recipes/external/:id - Get recipe by external ID (MealDB)
-router.get('/external/:id', async (req, res) => {
-    try {
-        // First check if we have it in our database
-        const recipe = await Recipe.findOne({ externalId: req.params.id });
-
-        if (recipe) {
-            return res.status(200).json({
-                success: true,
-                recipe
-            });
-        }
-
-        // If not in our database, fetch from MealDB
-        try {
-            const mealDbData = await fetchFromMealDb(`lookup.php?i=${req.params.id}`);
-
-            if (mealDbData.meals && mealDbData.meals.length > 0) {
-                return res.status(200).json({
-                    success: true,
-                    meals: mealDbData.meals
-                });
-            } else {
-                return res.status(404).json({
-                    success: false,
-                    error: 'Recipe not found in external API'
-                });
-            }
-        } catch (mealDbError) {
-            console.error('MealDB API Error:', mealDbError);
-            return res.status(500).json({
-                success: false,
-                error: 'Error fetching from external API'
-            });
-        }
-    } catch (error) {
-        console.error('Error getting recipe by external ID:', error);
-        res.status(500).json({
-            success: false,
-            error: 'Server Error'
-        });
-    }
-});
-
 // GET /api/recipes/:id - Get recipe by ID
 router.get('/:id', async (req, res) => {
     try {
-        const recipe = await Recipe.findById(req.params.id);
+        // Get user context for favorites
+        let user = null;
+        if (req.headers.authorization) {
+            try {
+                const jwt = require('jsonwebtoken');
+                const token = req.headers.authorization.split(' ')[1];
+                const decoded = jwt.verify(token, process.env.JWT_SECRET || 'mysecretkey');
+                user = await User.findById(decoded.id);
+            } catch (err) {
+                // Continue without user context
+            }
+        }
+
+        let recipe = null;
+
+        // Try to find by MongoDB ID first
+        if (req.params.id.match(/^[0-9a-fA-F]{24}$/)) {
+            recipe = await Recipe.findById(req.params.id);
+        } else {
+            // Try to find by external ID
+            recipe = await Recipe.findOne({ externalId: req.params.id });
+        }
 
         if (!recipe) {
             return res.status(404).json({
                 success: false,
                 error: 'Recipe not found'
             });
+        }
+
+        // Add favorite status if user is authenticated
+        if (user) {
+            recipe = {
+                ...recipe.toObject(),
+                isFavorite: user.isFavoriteRecipe(recipe._id, recipe.externalId)
+            };
         }
 
         res.status(200).json({
@@ -403,7 +365,6 @@ router.get('/:id', async (req, res) => {
     } catch (error) {
         console.error('Error getting recipe by ID:', error);
 
-        // Check if error is due to invalid ID format
         if (error.kind === 'ObjectId') {
             return res.status(404).json({
                 success: false,
@@ -411,6 +372,66 @@ router.get('/:id', async (req, res) => {
             });
         }
 
+        res.status(500).json({
+            success: false,
+            error: 'Server Error'
+        });
+    }
+});
+
+// PUT /api/recipes/:id/favorite - Toggle favorite status for authenticated user
+router.put('/:id/favorite', auth, async (req, res) => {
+    try {
+        const user = await User.findById(req.user.id);
+
+        if (!user) {
+            return res.status(404).json({
+                success: false,
+                error: 'User not found'
+            });
+        }
+
+        let recipe = null;
+
+        // Try to find by MongoDB ID first
+        if (req.params.id.match(/^[0-9a-fA-F]{24}$/)) {
+            recipe = await Recipe.findById(req.params.id);
+        } else {
+            // Try to find by external ID
+            recipe = await Recipe.findOne({ externalId: req.params.id });
+        }
+
+        if (!recipe) {
+            return res.status(404).json({
+                success: false,
+                error: 'Recipe not found'
+            });
+        }
+
+        // Check if recipe is already in favorites
+        const isCurrentlyFavorite = user.isFavoriteRecipe(recipe._id, recipe.externalId);
+
+        if (isCurrentlyFavorite) {
+            // Remove from favorites
+            await user.removeFromFavorites(recipe._id, recipe.externalId);
+        } else {
+            // Add to favorites
+            await user.addToFavorites(recipe._id, recipe.externalId);
+        }
+
+        // Return the updated status
+        const updatedUser = await User.findById(req.user.id);
+        const newFavoriteStatus = updatedUser.isFavoriteRecipe(recipe._id, recipe.externalId);
+
+        res.status(200).json({
+            success: true,
+            recipe: {
+                ...recipe.toObject(),
+                isFavorite: newFavoriteStatus
+            }
+        });
+    } catch (error) {
+        console.error('Error toggling favorite:', error);
         res.status(500).json({
             success: false,
             error: 'Server Error'
@@ -426,7 +447,6 @@ router.post('/', async (req, res) => {
             const existingRecipe = await Recipe.findOne({ externalId: req.body.externalId });
 
             if (existingRecipe) {
-                // Update the existing recipe
                 Object.keys(req.body).forEach(key => {
                     existingRecipe[key] = req.body[key];
                 });
@@ -461,34 +481,6 @@ router.post('/', async (req, res) => {
             });
         }
 
-        res.status(500).json({
-            success: false,
-            error: 'Server Error'
-        });
-    }
-});
-
-// PUT /api/recipes/:id/favorite - Toggle favorite status
-router.put('/:id/favorite', async (req, res) => {
-    try {
-        const recipe = await Recipe.findById(req.params.id);
-
-        if (!recipe) {
-            return res.status(404).json({
-                success: false,
-                error: 'Recipe not found'
-            });
-        }
-
-        recipe.isFavorite = !recipe.isFavorite;
-        await recipe.save();
-
-        res.status(200).json({
-            success: true,
-            recipe
-        });
-    } catch (error) {
-        console.error('Error toggling favorite:', error);
         res.status(500).json({
             success: false,
             error: 'Server Error'
@@ -546,6 +538,12 @@ router.delete('/:id', async (req, res) => {
                 error: 'Recipe not found'
             });
         }
+
+        // Also remove this recipe from all users' favorites
+        await User.updateMany(
+            { 'favorites.recipeId': req.params.id },
+            { $pull: { favorites: { recipeId: req.params.id } } }
+        );
 
         res.status(200).json({
             success: true,
