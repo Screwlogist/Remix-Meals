@@ -85,3 +85,9 @@ function updateAuthUI() {
         `;
     }
 }
+
+function getLoggedInUser() {
+  const userData = localStorage.getItem('user');
+  return userData ? JSON.parse(userData) : null;
+}
+// ✅ Optional: Check if user is admin

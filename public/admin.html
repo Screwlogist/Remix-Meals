@@ -2,95 +2,104 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Admin Dashboard - RemixMeals</title>
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/materialize/1.0.0/css/materialize.min.css" />
-  <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet" />
+
+  <!-- Materialize CSS & Icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/materialize/1.0.0/css/materialize.min.css"/>
+  <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet"/>
+
   <style>
     body {
-      padding: 40px;
-      background-color: #f4f6f8;
+      padding: 30px;
+      background-color: #f5f5f5;
+      font-family: 'Poppins', sans-serif;
     }
-    h4 {
+    .card-panel h5 {
+      font-weight: 600;
+    }
+    .dashboard-metrics {
+      display: flex;
+      gap: 20px;
+      flex-wrap: wrap;
+    }
+    .dashboard-actions {
       margin-top: 40px;
-    }
-    .collection-item button {
-      margin-left: 10px;
     }
   </style>
 </head>
 <body>
 
-  <header class="center-align">
-    <h3><i class="material-icons">admin_panel_settings</i> Admin Dashboard</h3>
-    <button class="btn red" onclick="logout()">
-      <i class="material-icons left">logout</i>Logout
-    </button>
-  </header>
+  <div class="container">
+    <h4 class="center-align">👨‍💼 Admin Dashboard</h4>
 
-  <main class="container">
-    <section id="user-management">
-      <h4>👤 User Management</h4>
-      <button class="btn green" onclick="fetchUsers()">Refresh Users</button>
-      <ul id="user-list" class="collection"></ul>
-      <h5>Add / Edit User</h5>
-      <form id="user-form">
-        <input type="hidden" id="user-id" />
-        <div class="input-field">
-            <input type="text" id="user-name" placeholder="Username" required />
+    <div class="dashboard-metrics row">
+      <div class="col s12 m6">
+        <div class="card-panel green lighten-4">
+          <h5><i class="material-icons left">group</i>Total Users</h5>
+          <p id="user-count" class="flow-text green-text text-darken-4">Loading...</p>
         </div>
-        <div class="input-field">
-            <input type="email" id="user-email" placeholder="Email" required />
-        </div>
-        <div class="input-field">
-            <input type="password" id="user-password" placeholder="Password" />
-        </div>
-        <label>
-            <input type="checkbox" id="user-is-admin" />
-            <span>Is Admin?</span>
-        </label><br><br>
-        <button type="submit" class="btn blue">Save User</button>
-      </form>
-    </section>
+      </div>
 
-    <section id="recipe-management">
-      <h4>🍲 Recipe Management</h4>
-      <button class="btn orange" onclick="fetchRecipes()">Refresh Recipes</button>
-      <ul id="recipe-list" class="collection"></ul>
-      <h5>Add / Edit Recipe</h5>
-      <form id="recipe-form">
-        <input type="hidden" id="recipe-id" />
+      <div class="col s12 m6">
+        <div class="card-panel orange lighten-4">
+          <h5><i class="material-icons left">restaurant_menu</i>Total Recipes</h5>
+          <p id="recipe-count" class="flow-text orange-text text-darken-4">Loading...</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="dashboard-actions center-align">
+      <a href="manage-users.html" class="btn-large green"><i class="material-icons left">group</i>Manage Users</a>
+      <a href="manage-recipes.html" class="btn-large orange"><i class="material-icons left">restaurant_menu</i>Manage Recipes</a>
+    </div>
+
+    <div class="center-align" style="margin-top: 30px;">
+      <button class="btn red" onclick="logout()">
+        <i class="material-icons left">exit_to_app</i>Logout
+      </button>
+    </div>
+  </div>
   
-        <div class="input-field">
-            <input type="text" id="recipe-name" placeholder="Name" required />
-        </div>
-
-        <div class="input-field">
-            <input type="text" id="recipe-category" placeholder="Category" />
-        </div>
-
-        <div class="input-field">
-            <input type="text" id="recipe-cuisine" placeholder="Cuisine" />
-        </div>
-
-        <div class="input-field">
-            <textarea id="recipe-instructions" placeholder="Instructions" class="materialize-textarea"></textarea>
-        </div>
-
-        <div class="input-field">
-            <input type="text" id="recipe-image" placeholder="Image URL" />
-        </div>
-
-        <div class="input-field">
-            <input type="text" id="recipe-ingredients" placeholder="Ingredients (comma-separated)" />
-        </div>
-
-        <button type="submit" class="btn blue">Save Recipe</button>
-      </form>
-    </section>
-  </main>
-
   <script src="js/auth.js"></script>
-  <script src="js/admin.js"></script>
+  <script>
+    //Just added this
+    document.addEventListener('DOMContentLoaded', () => {
+      const user = getLoggedInUser();
+      if (!user || !user.isAdmin) {
+        M.toast({ html: 'Access denied: Admins only', classes: 'red' });
+        window.location.href = 'index.html'; // or login.html
+      }
+    });
+    document.addEventListener('DOMContentLoaded', async () => {
+      const token = getToken();
+      if (!token) return (window.location.href = 'login.html');
+
+      try {
+        const [userRes, recipeRes] = await Promise.all([
+          fetch('/api/admin/users', { headers: { Authorization: `Bearer ${token}` } }),
+          fetch('/api/recipes?limit=1000', { headers: { Authorization: `Bearer ${token}` } }),
+        ]);
+
+        const usersData = await userRes.json();
+        const recipesData = await recipeRes.json();
+
+        const userCount = usersData.users.filter(u => !u.isAdmin).length;
+        document.getElementById('user-count').textContent = userCount;
+
+        const recipeCount = recipesData.count || recipesData.recipes?.length || 0;
+        document.getElementById('recipe-count').textContent = recipeCount;
+      } catch (err) {
+        console.error('Dashboard fetch error:', err);
+      }
+    });
+
+    function logout() {
+      localStorage.clear();
+      sessionStorage.clear();
+      window.location.href = 'login.html';
+    }
+  </script>
 
 </body>
 </html>

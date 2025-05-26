@@ -32,10 +32,14 @@ router.post('/register', async (req, res) => {
         }
 
         // Create new user
+        const adminExists = await User.exists({ isAdmin: true });
+        const isAdmin = !adminExists;
+
         user = new User({
             name,
             email,
-            password
+            password,
+            isAdmin
         });
 
         await user.save();

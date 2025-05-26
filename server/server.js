@@ -7,24 +7,13 @@ const cookieParser = require('cookie-parser');
 const app = express();
 
 // Connect to MongoDB
-// mongoose.connect('mongodb://localhost:27017/recipefinder', {
-//     useNewUrlParser: true,
-//     useUnifiedTopology: true,
-// })
-//     .then(() => console.log('MongoDB Connected'))
-//     .catch(err => {
-//         console.error('MongoDB Connection Error:', err);
-//         process.exit(1);
-//     });
-
-// Connect to MongoDB
 mongoose.connect('mongodb://localhost:27017/recipefinder', {
     useNewUrlParser: true,
     useUnifiedTopology: true,
 })
 .then(() => {
     console.log('MongoDB Connected');
-    //createAdmin(); // 👈 Add this here
+    checkAdminStatus(); 
 })
 .catch(err => {
     console.error('MongoDB Connection Error:', err);
@@ -89,27 +78,39 @@ process.on('unhandledRejection', (err) => {
 
 
 
-const User = require('./models/User');
-const bcrypt = require('bcryptjs');
+// const User = require('./models/User');
+// const bcrypt = require('bcryptjs');
 
 // async function createAdmin() {
 //     try {
 //         const existingAdmin = await User.findOne({ email: 'admin@example.com' });
 //         if (existingAdmin) {
-//             console.log('✅ Admin user already exists');
+//             console.log('✅ Admin already exists');
 //             return;
 //         }
 
-//         const hashedPassword = await bcrypt.hash('admin123', 10);
-//         await User.create({
+//         const admin = new User({
 //             name: 'admin',
 //             email: 'admin@example.com',
-//             password: hashedPassword,
+//             password: 'admin123',  // 👈 Plain text on purpose!
 //             isAdmin: true
 //         });
 
-//         console.log('✅ Admin user created: admin@example.com / admin123');
+//         await admin.save();  // 👈 Triggers pre-save hook to hash password
+//         console.log('✅ Admin created with auto-hashed password');
 //     } catch (err) {
-//         console.error('❌ Error creating admin user:', err.message);
+//         console.error('❌ Error creating admin:', err.message);
 //     }
 // }
+
+const User = require('./models/User');
+
+async function checkAdminStatus() {
+  const adminExists = await User.findOne({ isAdmin: true });
+
+  if (adminExists) {
+    console.log('✅ Admin exists: ' + adminExists.name);
+  } else {
+    console.log('⚠️ No admin user found. The first registered user will become the admin.');
+  }
+}
