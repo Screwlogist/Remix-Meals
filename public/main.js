@@ -21,12 +21,24 @@ const preloader = document.getElementById('preloader');
 
 // Initialize Materialize components
 document.addEventListener('DOMContentLoaded', function() {
+    console.log('🚀 DOM Content Loaded - Initializing...');
+    console.log('📋 Search form element:', searchForm);
+    console.log('🍟 Ingredients chips element:', ingredientsChips);
+    console.log('📝 Ingredients hidden element:', ingredientsHidden);
+    console.log('📊 Results grid element:', resultsGrid);
+
     // Initialize chips with autocomplete
     const chipsInstance = M.Chips.init(ingredientsChips, {
         placeholder: 'Enter ingredients (press Enter after each)',
         secondaryPlaceholder: '+ Add another ingredient',
-        onChipAdd: () => updateHiddenInput(),
-        onChipDelete: () => updateHiddenInput(),
+        onChipAdd: () => {
+            console.log('➕ Chip added');
+            updateHiddenInput();
+        },
+        onChipDelete: () => {
+            console.log('➖ Chip deleted');
+            updateHiddenInput();
+        },
         autocompleteOptions: {
             data: {
                 'chicken': null,
@@ -50,11 +62,24 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     });
 
+    console.log('🍟 Chips initialized:', chipsInstance);
+
     // Function to update hidden input with chips values
     function updateHiddenInput() {
-        const chipsData = M.Chips.getInstance(ingredientsChips).chipsData;
-        const ingredients = chipsData.map(chip => chip.tag.trim().toLowerCase());
-        ingredientsHidden.value = ingredients.join(',');
+        console.log('🔄 updateHiddenInput called');
+        const chipsInstance = M.Chips.getInstance(ingredientsChips);
+        console.log('🍟 Chips instance in update:', chipsInstance);
+
+        if (chipsInstance) {
+            const chipsData = chipsInstance.chipsData;
+            console.log('🍟 Chips data in update:', chipsData);
+            const ingredients = chipsData.map(chip => chip.tag.trim().toLowerCase());
+            console.log('🥬 Processed ingredients:', ingredients);
+            ingredientsHidden.value = ingredients.join(',');
+            console.log('📝 Hidden input updated to:', ingredientsHidden.value);
+        } else {
+            console.log('❌ No chips instance found in updateHiddenInput');
+        }
     }
 
     // Initialize Materialize tooltips and other components
@@ -82,14 +107,33 @@ document.addEventListener('DOMContentLoaded', function() {
 
 // Event listeners
 searchForm.addEventListener('submit', (e) => {
+    console.log('🎯 Search form submitted!');
     e.preventDefault();
 
+    // Clear any existing content first (including favorites)
+    resultsGrid.innerHTML = '';
+    clearMessage();
+
     const ingredients = ingredientsHidden.value;
+    console.log('🥬 Ingredients from hidden input:', ingredients);
+    console.log('🥬 Hidden input element:', ingredientsHidden);
+
+    // Also check the chips directly
+    if (ingredientsChips) {
+        const chipsInstance = M.Chips.getInstance(ingredientsChips);
+        console.log('🍟 Chips instance:', chipsInstance);
+        if (chipsInstance) {
+            console.log('🍟 Chips data:', chipsInstance.chipsData);
+        }
+    }
 
     if (!ingredients) {
+        console.log('❌ No ingredients found!');
         showMessage('Please enter at least one ingredient', true);
         return;
     }
+
+    console.log('✅ Ingredients valid, starting search...');
 
     // Show preloader
     if (preloader) {
@@ -134,14 +178,23 @@ async function fetchFromApi(endpoint, options = {}) {
 
 // Recipe operations
 async function searchRecipesMulti(ingredients) {
+    console.log('🔍 searchRecipesMulti called with ingredients:', ingredients);
+
+    // Clear any existing content (including favorites display)
+    resultsGrid.innerHTML = '';
+    clearMessage();
+
     // Display ingredients in a readable format
     const ingredientsList = ingredients.split(',').join(', ');
     showMessage(`Searching for recipes with: ${ingredientsList}...`, false, true);
-    resultsGrid.innerHTML = '';
 
     try {
+        console.log('📡 Making API call to:', `/recipes/search-multi?ingredients=${encodeURIComponent(ingredients)}`);
+
         // Call the multi-ingredient search endpoint
         const data = await fetchFromApi(`/recipes/search-multi?ingredients=${encodeURIComponent(ingredients)}`);
+
+        console.log('📦 API Response received:', data);
 
         clearMessage();
 
@@ -152,11 +205,14 @@ async function searchRecipesMulti(ingredients) {
 
         if ((data.recipes && data.recipes.length > 0) || (data.meals && data.meals.length > 0)) {
             const recipes = data.recipes || data.meals;
+            console.log('✅ Displaying recipes:', recipes.length, 'recipes found');
             displayRecipes(recipes);
         } else {
+            console.log('❌ No recipes found');
             showMessage(`No recipes found with those ingredients. Try using fewer ingredients or different combinations.`, true);
         }
     } catch (error) {
+        console.error('❌ Search error:', error);
         // Hide preloader on error
         if (preloader) {
             preloader.style.display = 'none';
@@ -166,8 +222,11 @@ async function searchRecipesMulti(ingredients) {
 }
 
 async function getRandomRecipe() {
-    showMessage('Fetching a random recipe...', false, true);
+    // Clear any existing content (including favorites display)
     resultsGrid.innerHTML = '';
+    clearMessage();
+
+    showMessage('Fetching a random recipe...', false, true);
 
     // Show preloader
     if (preloader) {
