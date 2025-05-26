@@ -199,6 +199,7 @@ async function getRandomRecipe() {
     }
 }
 
+// Enhanced getFavoriteRecipes function with better display
 async function getFavoriteRecipes() {
     // Check if user is logged in
     if (!isLoggedIn()) {
@@ -206,8 +207,8 @@ async function getFavoriteRecipes() {
         return;
     }
 
-    showMessage('Loading your favorite recipes...', false, true);
-    resultsGrid.innerHTML = '';
+    // Show loading state
+    showFavoritesLoading();
 
     // Show preloader
     if (preloader) {
@@ -225,9 +226,9 @@ async function getFavoriteRecipes() {
         }
 
         if (data.recipes && data.recipes.length > 0) {
-            displayRecipes(data.recipes);
+            displayFavoritesWithHeader(data.recipes);
         } else {
-            showMessage('You have no favorite recipes yet. Start adding some by clicking the heart icon on recipes!', false);
+            showEmptyFavoritesState();
         }
     } catch (error) {
         // Hide preloader on error
@@ -241,6 +242,227 @@ async function getFavoriteRecipes() {
         } else {
             showMessage('Failed to load favorite recipes. Please try again.', true);
         }
+    }
+}
+
+// Show loading state for favorites
+function showFavoritesLoading() {
+    resultsGrid.innerHTML = `
+        <div class="favorites-loading">
+            <div class="favorites-loading-spinner"></div>
+            <p>Loading your favorite recipes...</p>
+        </div>
+    `;
+}
+
+// Display favorites with header and stats
+function displayFavoritesWithHeader(recipes) {
+    if (!recipes || recipes.length === 0) {
+        showEmptyFavoritesState();
+        return;
+    }
+
+    // Calculate stats
+    const stats = calculateFavoritesStats(recipes);
+
+    // Create the favorites display HTML
+    resultsGrid.innerHTML = `
+        <!-- Favorites Header -->
+        <div class="favorites-header animate__animated animate__fadeIn">
+            <h2>
+                <i class="material-icons">favorite</i>
+                My Favorite Recipes
+            </h2>
+            <p>Your personally curated collection of ${recipes.length} delicious recipe${recipes.length > 1 ? 's' : ''}</p>
+        </div>
+
+        <!-- Favorites Stats -->
+        <div class="favorites-stats animate__animated animate__fadeInUp">
+            <div class="stat-item">
+                <span class="stat-number">${stats.total}</span>
+                <div class="stat-label">Total Favorites</div>
+            </div>
+            <div class="stat-item">
+                <span class="stat-number">${stats.recent}</span>
+                <div class="stat-label">Added This Week</div>
+            </div>
+            <div class="stat-item">
+                <span class="stat-number">${stats.cuisines}</span>
+                <div class="stat-label">Different Cuisines</div>
+            </div>
+            <div class="stat-item">
+                <span class="stat-number">${stats.categories}</span>
+                <div class="stat-label">Recipe Categories</div>
+            </div>
+        </div>
+
+        <!-- Favorites Grid -->
+        <div class="favorites-grid">
+            ${recipes.map((recipe, index) => createFavoriteRecipeCard(recipe, index)).join('')}
+        </div>
+    `;
+
+    // Add smooth scroll to favorites section
+    resultsGrid.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+// Calculate favorites statistics
+function calculateFavoritesStats(recipes) {
+    const now = new Date();
+    const oneWeekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+
+    const recentAdditions = recipes.filter(recipe => {
+        const addedDate = new Date(recipe.addedAt);
+        return addedDate >= oneWeekAgo;
+    }).length;
+
+    const cuisines = new Set(recipes.map(recipe => recipe.cuisine).filter(cuisine => cuisine));
+    const categories = new Set(recipes.map(recipe => recipe.category).filter(category => category));
+
+    return {
+        total: recipes.length,
+        recent: recentAdditions,
+        cuisines: cuisines.size,
+        categories: categories.size
+    };
+}
+
+// Create individual favorite recipe card
+function createFavoriteRecipeCard(recipe, index) {
+    const id = recipe._id || recipe.idMeal;
+    const name = recipe.name || recipe.strMeal;
+    const image = recipe.image || recipe.strMealThumb;
+    const category = recipe.category || recipe.strCategory;
+    const cuisine = recipe.cuisine || recipe.strArea;
+    const addedDate = recipe.addedAt ? formatFavoriteDate(recipe.addedAt) : 'Recently added';
+
+    // Create tags array
+    const tags = [];
+    if (category) tags.push(category);
+    if (cuisine && cuisine !== category) tags.push(cuisine);
+
+    return `
+        <div class="favorite-recipe-card animate__animated animate__fadeInUp" 
+             style="animation-delay: ${index * 0.1}s" 
+             data-recipe-id="${id}">
+            <div class="favorite-badge">
+                <i class="material-icons">favorite</i>
+            </div>
+            <img src="${image}" 
+                 alt="${name}" 
+                 class="favorite-recipe-image"
+                 onerror="this.src='https://via.placeholder.com/300x200/4caf50/white?text=Recipe'"
+                 loading="lazy">
+            <div class="favorite-recipe-content">
+                <h3 class="favorite-recipe-title">${name}</h3>
+                <div class="favorite-recipe-meta">
+                    ${tags.map(tag => `<span class="favorite-recipe-tag">${tag}</span>`).join('')}
+                </div>
+                <div class="favorite-recipe-date">
+                    <i class="material-icons" style="font-size: 1rem;">schedule</i>
+                    Added ${addedDate}
+                </div>
+                <div class="favorite-recipe-actions">
+                    <button class="favorite-action-btn favorite-btn-view" 
+                            onclick="viewFavoriteRecipe('${id}')">
+                        <i class="material-icons">visibility</i>
+                        View Recipe
+                    </button>
+                    <button class="favorite-action-btn favorite-btn-remove" 
+                            onclick="removeFavoriteRecipe('${id}')">
+                        <i class="material-icons">delete</i>
+                        Remove
+                    </button>
+                </div>
+            </div>
+        </div>
+    `;
+}
+
+// Show empty state when no favorites
+function showEmptyFavoritesState() {
+    resultsGrid.innerHTML = `
+        <div class="favorites-empty animate__animated animate__fadeIn">
+            <i class="material-icons favorites-empty-icon">favorite_border</i>
+            <h3>No Favorite Recipes Yet</h3>
+            <p>Start exploring recipes and click the heart icon to add them to your favorites!</p>
+            <button class="favorites-empty-btn" onclick="clearMessage(); resultsGrid.innerHTML = '';">
+                <i class="material-icons">search</i>
+                Start Exploring Recipes
+            </button>
+        </div>
+    `;
+}
+
+// View favorite recipe (opens the recipe modal)
+function viewFavoriteRecipe(recipeId) {
+    getRecipeDetails(recipeId);
+}
+
+// Remove recipe from favorites
+async function removeFavoriteRecipe(recipeId) {
+    try {
+        // Show loading state on the remove button
+        const removeBtn = document.querySelector(`[data-recipe-id="${recipeId}"] .favorite-btn-remove`);
+        if (removeBtn) {
+            removeBtn.innerHTML = '<i class="material-icons">hourglass_empty</i> Removing...';
+            removeBtn.disabled = true;
+        }
+
+        const response = await fetchFromApi(`/recipes/${recipeId}/favorite`, {
+            method: 'PUT'
+        });
+
+        if (response.success) {
+            showMessage('Recipe removed from favorites!', false);
+
+            // Remove the card with animation
+            const recipeCard = document.querySelector(`[data-recipe-id="${recipeId}"]`);
+            if (recipeCard) {
+                recipeCard.classList.add('animate__animated', 'animate__fadeOut');
+                setTimeout(() => {
+                    // Reload favorites to update stats and grid
+                    getFavoriteRecipes();
+                }, 500);
+            }
+        } else {
+            throw new Error('Failed to remove from favorites');
+        }
+    } catch (error) {
+        console.error('Error removing from favorites:', error);
+        showMessage('Failed to remove recipe from favorites. Please try again.', true);
+
+        // Reset the button
+        const removeBtn = document.querySelector(`[data-recipe-id="${recipeId}"] .favorite-btn-remove`);
+        if (removeBtn) {
+            removeBtn.innerHTML = '<i class="material-icons">delete</i> Remove';
+            removeBtn.disabled = false;
+        }
+    }
+}
+
+// Format date for favorites display
+function formatFavoriteDate(dateString) {
+    const date = new Date(dateString);
+    const now = new Date();
+    const diffTime = Math.abs(now - date);
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
+    if (diffDays === 1) {
+        return 'today';
+    } else if (diffDays === 2) {
+        return 'yesterday';
+    } else if (diffDays <= 7) {
+        return `${diffDays - 1} days ago`;
+    } else if (diffDays <= 30) {
+        const weeks = Math.floor(diffDays / 7);
+        return `${weeks} week${weeks > 1 ? 's' : ''} ago`;
+    } else {
+        return date.toLocaleDateString('en-US', {
+            year: 'numeric',
+            month: 'short',
+            day: 'numeric'
+        });
     }
 }
 
@@ -383,6 +605,7 @@ function displayRecipes(recipes) {
               ${isFavorite ? '<span class="favorite-badge pulse"><i class="material-icons">favorite</i></span>' : ''}
             </div>
             <div class="card-content">
+              <h3>${name}</h3>
               <p>${generateRandomDescription()}</p>
             </div>
             <div class="card-action">
