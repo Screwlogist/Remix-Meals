@@ -32,7 +32,7 @@ app.get('/', (req, res) => {
 
 // API Routes
 app.use('/api/recipes', require('./routes/recipeRoutes'));
-app.use('/api/users', require('./routes/userRoutes')); // Add user routes
+app.use('/api/users', require('./routes/userRoutes-clean.js')); // Add user routes
 app.use('/api/admin', require('./routes/adminRoutes')); // Add admin routes
 
 // Serve static files from the public directory

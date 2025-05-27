@@ -13,7 +13,7 @@ module.exports = async function(req, res, next) {
         token = req.headers.authorization.split(' ')[1];
     }
     // If no token in header, check cookies
-    else if (req.cookies.token) {
+    else if (req.cookies && req.cookies.token) {
         token = req.cookies.token;
     }
 
