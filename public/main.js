@@ -538,12 +538,401 @@ async function getRecipeDetails(id) {
 
         if ((data.recipe) || (data.meals && data.meals.length > 0)) {
             const recipe = data.recipe || data.meals[0];
-            displayRecipeDetails(recipe);
+            displayRecipeDetailsModern(recipe);
         } else {
             modalContent.innerHTML = '<p class="message error animate__animated animate__shakeX">Could not load recipe details.</p>';
         }
     } catch (error) {
         modalContent.innerHTML = '<p class="message error animate__animated animate__shakeX">Failed to load recipe details. Check your connection or try again.</p>';
+    }
+}
+
+// Enhanced modern recipe details display function with new layout
+function displayRecipeDetailsModern(recipe) {
+    // Handle both our database format and MealDB format
+    const id = recipe._id || recipe.idMeal;
+    const name = recipe.name || recipe.strMeal;
+    const image = recipe.image || recipe.strMealThumb;
+    const instructions = recipe.instructions || recipe.strInstructions;
+    const category = recipe.category || recipe.strCategory;
+    const cuisine = recipe.cuisine || recipe.strArea;
+    const videoUrl = recipe.videoUrl || recipe.strYoutube;
+    const sourceUrl = recipe.sourceUrl || recipe.strSource;
+    const isMealDb = !!recipe.idMeal;
+    const isFavorite = recipe.isFavorite || false;
+
+    let ingredients = [];
+
+    if (recipe.ingredients) {
+        // Our database format
+        ingredients = recipe.ingredients.map(ing => ({
+            name: ing.name,
+            measure: ing.measure || ''
+        }));
+    } else {
+        // MealDB format
+        for (let i = 1; i <= 20; i++) {
+            const ingredient = recipe[`strIngredient${i}`]?.trim();
+            const measure = recipe[`strMeasure${i}`]?.trim();
+
+            if (ingredient) {
+                ingredients.push({
+                    name: ingredient,
+                    measure: measure || ''
+                });
+            } else {
+                break;
+            }
+        }
+    }
+
+    // Create enhanced tags HTML
+    const tags = [];
+    if (category) tags.push({ text: category, type: 'category' });
+    if (cuisine && cuisine !== category) tags.push({ text: cuisine, type: 'cuisine' });
+
+    const tagsHTML = tags.length > 0
+        ? `<div class="recipe-tags-container">
+             ${tags.map(tag => `<span class="recipe-tag ${tag.type}-tag animate__animated animate__bounceIn">${tag.text}</span>`).join('')}
+           </div>`
+        : '';
+
+    // Generate ingredients HTML with checkboxes
+    const ingredientsHTML = ingredients.map((ing, index) => `
+        <li class="ingredient-item">
+            <label class="ingredient-checkbox">
+                <input type="checkbox" id="ingredient-${index}" />
+                <span class="checkmark"></span>
+                <span class="ingredient-text">
+                    ${ing.measure ? `<span class="ingredient-measure">${ing.measure}</span> ` : ''}${ing.name}
+                </span>
+            </label>
+        </li>
+    `).join('');
+
+    // Favorite button (only if user is logged in)
+    let favoriteButton = '';
+    if (isLoggedIn()) {
+        favoriteButton = `
+            <button class="favorite-button animate__animated animate__pulse" id="favorite-btn" 
+                    data-id="${id}" data-mealdb="${isMealDb}" data-favorite="${isFavorite}">
+                <i class="material-icons">${isFavorite ? 'favorite' : 'favorite_border'}</i>
+                ${isFavorite ? 'Remove from Favorites' : 'Add to Favorites'}
+            </button>
+        `;
+    }
+
+    modalContent.innerHTML = `
+        <div class="recipe-modal-content">
+            <!-- Recipe Header -->
+            <div class="recipe-header">
+                <div class="recipe-title-section">
+                    <h2 class="recipe-title animate__animated animate__fadeInDown">${name}</h2>
+                    ${tagsHTML}
+                </div>
+                ${favoriteButton}
+            </div>
+            
+            <!-- Image and Ingredients Side by Side -->
+            <div class="recipe-image-ingredients-container">
+                <!-- Recipe Image - Left Side -->
+                <div class="recipe-image-section animate__animated animate__fadeInLeft">
+                    <img src="${image}" alt="${name}" class="recipe-image" 
+                         onerror="this.src='https://via.placeholder.com/600x400/4caf50/white?text=Recipe+Image'">
+                </div>
+                
+                <!-- Ingredients - Right Side -->
+                <div class="recipe-ingredients-section animate__animated animate__fadeInRight">
+                    <div class="ingredients-header">
+                        <h3 class="ingredients-title">
+                            <i class="material-icons">restaurant_menu</i>
+                            Ingredients
+                        </h3>
+                        <div class="ingredients-progress">
+                            <span class="progress-count" id="checked-count">0</span> of ${ingredients.length} ready
+                        </div>
+                    </div>
+                    <ul class="ingredients-list">
+                        ${ingredientsHTML}
+                    </ul>
+                </div>
+            </div>
+            
+            <!-- Instructions and Side Content -->
+            <div class="recipe-content-grid">
+                <div class="recipe-main-content">
+                    <!-- Instructions Section -->
+                    <div class="recipe-section">
+                        <h3 class="section-title">
+                            <i class="material-icons">assignment</i>
+                            Instructions
+                        </h3>
+                        <div class="instructions-content">
+                            <p>${instructions ? instructions.replace(/\r?\n/g, "<br>") : "Instructions not available."}</p>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="recipe-side-content">
+                    ${videoUrl ? `
+                        <div class="recipe-section">
+                            <h3 class="section-title">
+                                <i class="material-icons">play_circle_filled</i>
+                                Video Tutorial
+                            </h3>
+                            <div class="video-actions">
+                                <a class="action-btn video-btn" href="${videoUrl}" target="_blank">
+                                    <i class="material-icons">play_arrow</i>
+                                    Watch on YouTube
+                                </a>
+                            </div>
+                        </div>
+                    ` : ''}
+                    
+                    ${sourceUrl ? `
+                        <div class="recipe-section">
+                            <h3 class="section-title">
+                                <i class="material-icons">link</i>
+                                Original Source
+                            </h3>
+                            <div class="source-actions">
+                                <a class="action-btn source-btn" href="${sourceUrl}" target="_blank">
+                                    <i class="material-icons">open_in_new</i>
+                                    View Original Recipe
+                                </a>
+                            </div>
+                        </div>
+                    ` : ''}
+                </div>
+            </div>
+        </div>
+    `;
+
+    // Add event listener for favorite button if it exists
+    const favoriteBtn = document.getElementById('favorite-btn');
+    if (favoriteBtn) {
+        favoriteBtn.addEventListener('click', async (e) => {
+            const btn = e.currentTarget;
+            const recipeId = btn.dataset.id;
+            const isMealDb = btn.dataset.mealdb === 'true';
+
+            // Enhanced button animation
+            btn.classList.add('animate__animated', 'animate__heartBeat');
+
+            // Disable button while processing
+            btn.disabled = true;
+            const originalHTML = btn.innerHTML;
+            btn.innerHTML = '<i class="material-icons">hourglass_empty</i> Updating...';
+
+            await toggleFavorite(recipeId, isMealDb);
+
+            // Re-enable button
+            btn.disabled = false;
+
+            // Remove animation class after it completes
+            setTimeout(() => {
+                btn.classList.remove('animate__heartBeat');
+            }, 1000);
+        });
+    }
+
+    // Add event listeners for ingredient checkboxes
+    const checkboxes = document.querySelectorAll('.ingredient-checkbox input[type="checkbox"]');
+    const checkedCountElement = document.getElementById('checked-count');
+
+    if (checkboxes.length > 0 && checkedCountElement) {
+        checkboxes.forEach(checkbox => {
+            checkbox.addEventListener('change', updateIngredientProgress);
+        });
+    }
+
+    function updateIngredientProgress() {
+        const checkedBoxes = document.querySelectorAll('.ingredient-checkbox input[type="checkbox"]:checked');
+        const checkedCount = checkedBoxes.length;
+
+        if (checkedCountElement) {
+            checkedCountElement.textContent = checkedCount;
+        }
+
+        // Add visual feedback for completed ingredients
+        checkboxes.forEach(checkbox => {
+            const ingredientItem = checkbox.closest('.ingredient-item');
+            if (checkbox.checked) {
+                ingredientItem.classList.add('completed');
+            } else {
+                ingredientItem.classList.remove('completed');
+            }
+        });
+
+        // Show completion message when all ingredients are checked
+        if (checkedCount === checkboxes.length && checkedCount > 0) {
+            showMessage('All ingredients checked! Ready to cook! 🍳', false);
+            setTimeout(clearMessage, 3000);
+        }
+    }
+}
+
+// NEW: Enhanced ingredient toggle with better animations and sound feedback
+function toggleIngredientEnhanced(element, index) {
+    const checkbox = element.querySelector('.ingredient-checkbox');
+    const item = element;
+
+    // Add ripple effect
+    createRippleEffect(element);
+
+    if (checkbox.classList.contains('checked')) {
+        checkbox.classList.remove('checked');
+        item.classList.remove('checked');
+        item.classList.add('animate__animated', 'animate__bounceIn');
+    } else {
+        checkbox.classList.add('checked');
+        item.classList.add('checked');
+        item.classList.add('animate__animated', 'animate__pulse');
+
+        // Celebration animation for completing ingredient
+        setTimeout(() => {
+            checkbox.classList.add('animate__animated', 'animate__tada');
+        }, 100);
+    }
+
+    // Clean up animation classes
+    setTimeout(() => {
+        item.classList.remove('animate__bounceIn', 'animate__pulse');
+        checkbox.classList.remove('animate__tada');
+    }, 1000);
+
+    // Update progress
+    updateIngredientProgress();
+}
+
+// NEW: Create ripple effect for ingredient clicks
+function createRippleEffect(element) {
+    const ripple = document.createElement('span');
+    const rect = element.getBoundingClientRect();
+    const size = Math.max(rect.width, rect.height);
+
+    ripple.style.cssText = `
+        position: absolute;
+        width: ${size}px;
+        height: ${size}px;
+        left: 50%;
+        top: 50%;
+        background: radial-gradient(circle, rgba(76, 175, 80, 0.3) 0%, transparent 70%);
+        border-radius: 50%;
+        transform: translate(-50%, -50%) scale(0);
+        animation: ripple 0.6s ease-out;
+        pointer-events: none;
+        z-index: 1;
+    `;
+
+    element.style.position = 'relative';
+    element.appendChild(ripple);
+
+    setTimeout(() => {
+        ripple.remove();
+    }, 600);
+
+    // Add ripple animation CSS if not already added
+    if (!document.getElementById('ripple-styles')) {
+        const style = document.createElement('style');
+        style.id = 'ripple-styles';
+        style.textContent = `
+            @keyframes ripple {
+                to {
+                    transform: translate(-50%, -50%) scale(2);
+                    opacity: 0;
+                }
+            }
+        `;
+        document.head.appendChild(style);
+    }
+}
+
+// NEW: Update ingredient progress indicator
+function updateIngredientProgress() {
+    const allIngredients = document.querySelectorAll('.ingredient-item');
+    const checkedIngredients = document.querySelectorAll('.ingredient-item.checked');
+    const progress = allIngredients.length > 0 ? (checkedIngredients.length / allIngredients.length) * 100 : 0;
+
+    // Update or create progress indicator
+    let progressIndicator = document.querySelector('.ingredient-progress');
+
+    if (!progressIndicator) {
+        progressIndicator = document.createElement('div');
+        progressIndicator.className = 'ingredient-progress';
+        progressIndicator.innerHTML = `
+            <div class="progress-bar">
+                <div class="progress-fill"></div>
+            </div>
+            <div class="progress-text">
+                <span class="progress-count">${checkedIngredients.length}</span> of 
+                <span class="progress-total">${allIngredients.length}</span> ingredients ready
+            </div>
+        `;
+
+        const ingredientsSection = document.querySelector('.ingredients-section');
+        if (ingredientsSection) {
+            ingredientsSection.appendChild(progressIndicator);
+        }
+
+        // Add progress bar styles
+        if (!document.getElementById('progress-styles')) {
+            const style = document.createElement('style');
+            style.id = 'progress-styles';
+            style.textContent = `
+                .ingredient-progress {
+                    margin-top: 20px;
+                    padding: 15px;
+                    background: linear-gradient(135deg, rgba(76, 175, 80, 0.05), rgba(255, 152, 0, 0.05));
+                    border-radius: 10px;
+                    border: 1px solid rgba(76, 175, 80, 0.1);
+                }
+                .progress-bar {
+                    height: 8px;
+                    background: rgba(0, 0, 0, 0.1);
+                    border-radius: 4px;
+                    overflow: hidden;
+                    margin-bottom: 10px;
+                }
+                .progress-fill {
+                    height: 100%;
+                    background: linear-gradient(90deg, var(--primary-color), var(--secondary-color));
+                    transition: width 0.3s ease;
+                    border-radius: 4px;
+                }
+                .progress-text {
+                    text-align: center;
+                    font-size: 0.9rem;
+                    color: var(--text-dark);
+                    font-weight: 500;
+                }
+                .progress-count {
+                    font-weight: 700;
+                    color: var(--primary-color);
+                }
+            `;
+            document.head.appendChild(style);
+        }
+    }
+
+    // Update progress
+    const progressFill = progressIndicator.querySelector('.progress-fill');
+    const progressCount = progressIndicator.querySelector('.progress-count');
+
+    if (progressFill) {
+        progressFill.style.width = `${progress}%`;
+    }
+
+    if (progressCount) {
+        progressCount.textContent = checkedIngredients.length;
+    }
+
+    // Add completion celebration
+    if (progress === 100 && allIngredients.length > 0) {
+        setTimeout(() => {
+            progressIndicator.classList.add('animate__animated', 'animate__pulse');
+            progressIndicator.style.background = 'linear-gradient(135deg, rgba(76, 175, 80, 0.2), rgba(255, 152, 0, 0.1))';
+        }, 300);
     }
 }
 
@@ -598,11 +987,12 @@ async function toggleFavorite(recipeId, isMealDb = false) {
 
             const newButtonText = recipe.isFavorite ? 'Remove from Favorites' : 'Add to Favorites';
             const newDataFavorite = recipe.isFavorite ? 'true' : 'false';
+            const newIcon = recipe.isFavorite ? 'favorite' : 'favorite_border';
 
             console.log('  - Setting button text to:', newButtonText);
             console.log('  - Setting data-favorite to:', newDataFavorite);
 
-            favoriteBtn.textContent = newButtonText;
+            favoriteBtn.innerHTML = `<i class="material-icons">${newIcon}</i> ${newButtonText}`;
             favoriteBtn.dataset.favorite = newDataFavorite;
 
             console.log('📍 AFTER UPDATE:');
@@ -701,54 +1091,98 @@ function displayRecipeDetails(recipe) {
 
     if (recipe.ingredients) {
         // Our database format
-        ingredients = recipe.ingredients.map(ing =>
-            `<li class="collection-item">${ing.measure ? `${ing.measure} ` : ""}${ing.name}</li>`
+        ingredients = recipe.ingredients.map((ing, index) =>
+            `<li class="ingredient-item">
+                <label class="ingredient-checkbox">
+                    <input type="checkbox" id="ingredient-${index}" />
+                    <span class="checkmark"></span>
+                    <span class="ingredient-text">${ing.measure ? `${ing.measure} ` : ""}${ing.name}</span>
+                </label>
+            </li>`
         );
     } else {
         // MealDB format
+        let ingredientIndex = 0;
         for (let i = 1; i <= 20; i++) {
             const ingredient = recipe[`strIngredient${i}`]?.trim();
             const measure = recipe[`strMeasure${i}`]?.trim();
 
             if (ingredient) {
-                ingredients.push(`<li class="collection-item">${measure ? `${measure} ` : ""}${ingredient}</li>`);
+                ingredients.push(
+                    `<li class="ingredient-item">
+                        <label class="ingredient-checkbox">
+                            <input type="checkbox" id="ingredient-${ingredientIndex}" />
+                            <span class="checkmark"></span>
+                            <span class="ingredient-text">${measure ? `${measure} ` : ""}${ingredient}</span>
+                        </label>
+                    </li>`
+                );
+                ingredientIndex++;
             } else {
                 break;
             }
         }
     }
 
-    const categoryHTML = category ? `<div class="chip">${category}</div>` : "";
-    const cuisineHTML = cuisine ? `<div class="chip">${cuisine}</div>` : "";
+    // Create tags
+    const tags = [];
+    if (category) tags.push(`<span class="recipe-tag category-tag">${category}</span>`);
+    if (cuisine && cuisine !== category) tags.push(`<span class="recipe-tag cuisine-tag">${cuisine}</span>`);
+
+    const tagsHTML = tags.length > 0 ? `<div class="recipe-tags">${tags.join('')}</div>` : '';
 
     const ingredientsHTML = ingredients.length
-        ? `<h3 class="animate__animated animate__fadeInLeft">Ingredients</h3>
-           <ul class="collection animate__animated animate__fadeInUp" style="animation-delay: 0.2s">
-             ${ingredients.join("")}
-           </ul>`
+        ? `<div class="recipe-section">
+             <h3 class="section-title">
+                <i class="material-icons">list</i>
+                Ingredients
+                <span class="ingredients-progress">(<span id="checked-count">0</span>/${ingredients.length})</span>
+             </h3>
+             <ul class="ingredients-list">
+               ${ingredients.join("")}
+             </ul>
+           </div>`
         : "";
 
     const instructionsHTML = `
-        <h3 class="animate__animated animate__fadeInLeft" style="animation-delay: 0.3s">Instructions</h3>
-        <div class="card-panel animate__animated animate__fadeInUp" style="animation-delay: 0.4s">
-            <p>${instructions ? instructions.replace(/\r?\n/g, "<br>") : "Instructions not available."}</p>
+        <div class="recipe-section">
+            <h3 class="section-title">
+                <i class="material-icons">assignment</i>
+                Instructions
+            </h3>
+            <div class="instructions-content">
+                <p>${instructions ? instructions.replace(/\r?\n/g, "<br>") : "Instructions not available."}</p>
+            </div>
         </div>
     `;
 
-    const youtubeHTML = videoUrl
-        ? `<h3 class="animate__animated animate__fadeInLeft" style="animation-delay: 0.5s">Video Recipe</h3>
-           <div class="video-wrapper animate__animated animate__fadeInUp" style="animation-delay: 0.6s">
-             <a class="waves-effect waves-light btn red" href="${videoUrl}" target="_blank">
-               <i class="material-icons left">play_circle_filled</i>Watch on YouTube
-             </a>
+    const videoHTML = videoUrl
+        ? `<div class="recipe-section">
+             <h3 class="section-title">
+                <i class="material-icons">play_circle_filled</i>
+                Video Tutorial
+             </h3>
+             <div class="video-actions">
+               <a class="action-btn video-btn" href="${videoUrl}" target="_blank">
+                 <i class="material-icons">play_arrow</i>
+                 Watch on YouTube
+               </a>
+             </div>
            </div>`
         : "";
 
     const sourceHTML = sourceUrl
-        ? `<div class="source-wrapper animate__animated animate__fadeInUp" style="animation-delay: 0.7s">
-             <a class="waves-effect waves-light btn blue" href="${sourceUrl}" target="_blank">
-               <i class="material-icons left">open_in_new</i>View Original Source
-             </a>
+        ? `<div class="recipe-section">
+             <h3 class="section-title">
+                <i class="material-icons">link</i>
+                Original Source
+             </h3>
+             <div class="source-actions">
+               <a class="action-btn source-btn" href="${sourceUrl}" target="_blank">
+                 <i class="material-icons">open_in_new</i>
+                 View Original Recipe
+               </a>
+             </div>
            </div>`
         : "";
 
@@ -758,41 +1192,39 @@ function displayRecipeDetails(recipe) {
         favoriteButton = `
             <button id="favorite-btn" class="favorite-button animate__animated animate__heartBeat" 
                     data-id="${id}" data-mealdb="${isMealDb}" data-favorite="${isFavorite}">
+                <i class="material-icons">${isFavorite ? 'favorite' : 'favorite_border'}</i>
                 ${isFavorite ? 'Remove from Favorites' : 'Add to Favorites'}
             </button>
         `;
     }
 
     modalContent.innerHTML = `
-        <div class="row">
-            <div class="col s12">
-                <h2 class="animate__animated animate__fadeInDown">${name}</h2>
-                <div class="tags-container">
-                    ${categoryHTML} ${cuisineHTML}
+        <div class="recipe-modal-content">
+            <!-- Recipe Header -->
+            <div class="recipe-header">
+                <div class="recipe-title-section">
+                    <h2 class="recipe-title animate__animated animate__fadeInDown">${name}</h2>
+                    ${tagsHTML}
                 </div>
-            </div>
-        </div>
-        
-        <div class="row">
-            <div class="col s12 m6">
-                <img src="${image}" alt="${name}" class="responsive-img animate__animated animate__fadeInLeft z-depth-2 hoverable">
                 ${favoriteButton}
             </div>
-            <div class="col s12 m6">
-                ${ingredientsHTML}
+            
+            <!-- Recipe Image -->
+            <div class="recipe-image-section animate__animated animate__fadeInLeft">
+                <img src="${image}" alt="${name}" class="recipe-image" onerror="this.src='https://via.placeholder.com/600x400/4caf50/white?text=Recipe+Image'">
             </div>
-        </div>
-        
-        <div class="row">
-            <div class="col s12">
-                ${instructionsHTML}
-            </div>
-        </div>
-        
-        <div class="row">
-            <div class="col s12">
-                ${youtubeHTML}
-                ${sourceHTML}
+            
+            <!-- Recipe Content Grid -->
+            <div class="recipe-content-grid">
+                <div class="recipe-main-content">
+                    ${ingredientsHTML}
+                    ${instructionsHTML}
+                </div>
+                
+                <div class="recipe-side-content">
+                    ${videoHTML}
+                    ${sourceHTML}
+                </div>
             </div>
         </div>
     `;
@@ -810,7 +1242,8 @@ function displayRecipeDetails(recipe) {
 
             // Disable button while processing
             btn.disabled = true;
-            btn.textContent = 'Updating...';
+            const originalContent = btn.innerHTML;
+            btn.innerHTML = '<i class="material-icons">hourglass_empty</i> Updating...';
 
             await toggleFavorite(recipeId, isMealDb);
 
@@ -822,6 +1255,41 @@ function displayRecipeDetails(recipe) {
                 btn.classList.remove('animate__rubberBand');
             }, 1000);
         });
+    }
+
+    // Add event listeners for ingredient checkboxes
+    const checkboxes = document.querySelectorAll('.ingredient-checkbox input[type="checkbox"]');
+    const checkedCountElement = document.getElementById('checked-count');
+
+    if (checkboxes.length > 0 && checkedCountElement) {
+        checkboxes.forEach(checkbox => {
+            checkbox.addEventListener('change', updateIngredientProgress);
+        });
+    }
+
+    function updateIngredientProgress() {
+        const checkedBoxes = document.querySelectorAll('.ingredient-checkbox input[type="checkbox"]:checked');
+        const checkedCount = checkedBoxes.length;
+
+        if (checkedCountElement) {
+            checkedCountElement.textContent = checkedCount;
+        }
+
+        // Add visual feedback for completed ingredients
+        checkboxes.forEach(checkbox => {
+            const ingredientItem = checkbox.closest('.ingredient-item');
+            if (checkbox.checked) {
+                ingredientItem.classList.add('completed');
+            } else {
+                ingredientItem.classList.remove('completed');
+            }
+        });
+
+        // Show completion message when all ingredients are checked
+        if (checkedCount === checkboxes.length && checkedCount > 0) {
+            showMessage('All ingredients checked! Ready to cook! 🍳', false);
+            setTimeout(clearMessage, 3000);
+        }
     }
 }
 
