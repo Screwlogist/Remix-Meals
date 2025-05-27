@@ -48,7 +48,7 @@ Before you begin, ensure you have the following installed:
 
 1. **Clone the repository**
    ```bash
-   git clone https://github.com/yourusername/remix-meals.git
+   git clone https://github.com/Screwlogist/Remix-Meals.git
    cd remix-meals
    ```
 
@@ -281,7 +281,7 @@ This project is part of an academic assignment for SIT725 - Applications Develop
 ## 📞 Support
 
 For questions or issues:
-1. Check the [Issues](https://github.com/yourusername/remix-meals/issues) section
+1. Check the [Issues](https://github.com/Screwlogist/Remix-Meals/issues) section
 2. Create a new issue if your problem isn't listed
 3. Contact the development team
 
