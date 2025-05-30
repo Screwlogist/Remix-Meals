@@ -13,6 +13,7 @@ mongoose.connect('mongodb://localhost:27017/recipefinder', {
 })
 .then(() => {
     console.log('MongoDB Connected');
+    checkAdminStatus(); 
 })
 .catch(err => {
     console.error('MongoDB Connection Error:', err);
@@ -32,6 +33,7 @@ app.get('/', (req, res) => {
 // API Routes
 app.use('/api/recipes', require('./routes/recipeRoutes'));
 app.use('/api/users', require('./routes/userRoutes-clean.js')); // Add user routes
+app.use('/api/admin', require('./routes/adminRoutes')); // Add admin routes
 
 // Serve static files from the public directory
 app.use(express.static(path.join(__dirname, '../public')));
@@ -75,3 +77,13 @@ process.on('unhandledRejection', (err) => {
 });
 
 const User = require('./models/User');
+
+async function checkAdminStatus() {
+  const adminExists = await User.findOne({ isAdmin: true });
+
+  if (adminExists) {
+    console.log('✅ Admin exists: ' + adminExists.name);
+  } else {
+    console.log('⚠️ No admin user found. The first registered user will become the admin.');
+  }
+}
