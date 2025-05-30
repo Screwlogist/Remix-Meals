@@ -13,7 +13,6 @@ mongoose.connect('mongodb://localhost:27017/recipefinder', {
 })
 .then(() => {
     console.log('MongoDB Connected');
-    checkAdminStatus(); 
 })
 .catch(err => {
     console.error('MongoDB Connection Error:', err);
@@ -33,7 +32,6 @@ app.get('/', (req, res) => {
 // API Routes
 app.use('/api/recipes', require('./routes/recipeRoutes'));
 app.use('/api/users', require('./routes/userRoutes-clean.js')); // Add user routes
-app.use('/api/admin', require('./routes/adminRoutes')); // Add admin routes
 
 // Serve static files from the public directory
 app.use(express.static(path.join(__dirname, '../public')));
@@ -76,41 +74,4 @@ process.on('unhandledRejection', (err) => {
     process.exit(1);
 });
 
-
-
-// const User = require('./models/User');
-// const bcrypt = require('bcryptjs');
-
-// async function createAdmin() {
-//     try {
-//         const existingAdmin = await User.findOne({ email: 'admin@example.com' });
-//         if (existingAdmin) {
-//             console.log('✅ Admin already exists');
-//             return;
-//         }
-
-//         const admin = new User({
-//             name: 'admin',
-//             email: 'admin@example.com',
-//             password: 'admin123',  // 👈 Plain text on purpose!
-//             isAdmin: true
-//         });
-
-//         await admin.save();  // 👈 Triggers pre-save hook to hash password
-//         console.log('✅ Admin created with auto-hashed password');
-//     } catch (err) {
-//         console.error('❌ Error creating admin:', err.message);
-//     }
-// }
-
 const User = require('./models/User');
-
-async function checkAdminStatus() {
-  const adminExists = await User.findOne({ isAdmin: true });
-
-  if (adminExists) {
-    console.log('✅ Admin exists: ' + adminExists.name);
-  } else {
-    console.log('⚠️ No admin user found. The first registered user will become the admin.');
-  }
-}
