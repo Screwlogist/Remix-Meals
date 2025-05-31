@@ -71,6 +71,17 @@ router.delete('/users/:id', async (req, res) => {
 // 🍲 RECIPE ROUTES
 //
 
+// GET all recipes (Admin only)
+router.get('/recipes', async (req, res) => {
+  try {
+    const recipes = await Recipe.find();
+    res.status(200).json({ success: true, data: recipes });
+  } catch (err) {
+    console.error('Error fetching recipes:', err);
+    res.status(500).json({ success: false, error: 'Failed to fetch recipes' });
+  }
+});
+
 // Add new recipe
 router.post('/recipes', async (req, res) => {
   const recipe = new Recipe(req.body);
