@@ -37,6 +37,36 @@ RemixMeals is a web application that helps users reduce food waste and save mone
 - **Real-time updates**: Live search results and instant feedback
 - **Material Design**: Clean, modern interface following Material Design principles
 
+## 🔐 Admin Access
+
+### 👤 Who is the Admin?
+The **first user who registers** on the platform is automatically assigned the **admin role**. This user has elevated permissions compared to regular users.
+
+### 🛠 What Can the Admin Do?
+Once logged in, the admin has access to a dedicated dashboard with the following capabilities:
+
+- ✅ **Manage Users**
+  - View a list of all registered users
+  - Promote or demote user roles
+  - Delete user accounts
+
+- ✅ **Manage Recipes**
+  - View all recipes in the database
+  - Add new recipes
+  - Edit or delete existing recipes
+
+- ✅ **View System Stats**
+  - View total number of users and recipes
+  - Get visual confirmation through toast notifications after each action
+
+### 🔓 How to Access the Admin Dashboard
+1. Register a new account (the **first registered user** becomes the admin).
+2. Log in with your registered email and password.
+3. If you are an admin, you will automatically gain access to the **admin dashboard**.
+4. Use the navigation to manage users and recipes or view system stats.
+
+> ⚠️ Note: All admin routes are protected using JWT authentication and admin middleware to prevent unauthorized access.
+
 ## 🚀 Getting Started
 
 ### Prerequisites
