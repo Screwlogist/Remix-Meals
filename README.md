@@ -235,7 +235,7 @@ We welcome contributions! Here's how you can help:
 
 ## 📝 License
 
-This project is part of an academic assignment for SIT725 - Applications Development.
+This project is part of an academic assignment for SIT725 - Applied Software Engineering.
 
 ## 🙏 Acknowledgments
 
