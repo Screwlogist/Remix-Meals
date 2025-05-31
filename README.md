@@ -245,7 +245,7 @@ The application includes comprehensive manual testing coverage:
 1. Follow the installation steps above
 2. Start MongoDB service
 3. Run `npm start` in the server directory
-4. Access at `http://localhost:5000`
+4. Access at `http://localhost:5050`
 
 ### **Production Deployment**
 1. Set up production MongoDB instance
