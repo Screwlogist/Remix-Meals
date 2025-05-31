@@ -136,5 +136,116 @@ remix-meals/
 └── README.md               # Project documentation
 ```
 
+## 🛠️ Technology Stack
+
+### **Frontend**
+- **HTML5** - Semantic markup
+- **CSS3** - Modern styling with Flexbox and Grid
+- **JavaScript (ES6+)** - Dynamic functionality
+- **Materialize CSS** - UI component framework
+- **Material Icons** - Icon library
+- **Animate.css** - CSS animations
+
+### **Backend**
+- **Node.js** - Server runtime
+- **Express.js** - Web application framework
+- **MongoDB** - NoSQL database
+- **Mongoose** - MongoDB object modeling
+
+### **Authentication & Security**
+- **JWT (JSON Web Tokens)** - Secure authentication
+- **bcryptjs** - Password hashing
+- **Cookie Parser** - Cookie handling
+
+### **External APIs**
+- **TheMealDB API** - Recipe data source
+
+## 🔧 API Endpoints
+
+### **Authentication Routes**
+```
+POST /api/users/register    # Register new user
+POST /api/users/login       # User login
+GET  /api/users/me          # Get current user info
+```
+
+### **Recipe Routes**
+```
+GET  /api/recipes                    # Get all recipes (paginated)
+GET  /api/recipes/search-multi       # Multi-ingredient search
+GET  /api/recipes/random             # Get random recipe
+GET  /api/recipes/favorites          # Get user's favorite recipes
+GET  /api/recipes/:id                # Get recipe by ID
+PUT  /api/recipes/:id/favorite       # Toggle favorite status
+```
+
+## 👥 User Roles
+
+### **Regular Users**
+- Search for recipes by ingredients
+- View detailed recipe information
+- Save favorite recipes
+- Access personal recipe collection
+
+## 🧪 Testing
+
+The application includes comprehensive manual testing coverage:
+
+### **Frontend Testing**
+- User interface responsiveness across devices
+- Form validation and error handling
+- Navigation and routing functionality
+- Authentication flow testing
+
+### **Backend Testing**
+- API endpoint functionality
+- Database operations (CRUD)
+- Authentication and authorization
+- Error handling and validation
+
+### **Integration Testing**
+- Frontend-backend communication
+- User authentication flow
+- Recipe search and management
+- Admin functionality
+
+## 🚀 Deployment
+
+### **Local Development**
+1. Follow the installation steps above
+2. Start MongoDB service
+3. Run `npm start` in the server directory
+4. Access at `http://localhost:5000`
+
+### **Production Deployment**
+1. Set up production MongoDB instance
+2. Configure environment variables
+3. Build and deploy to your hosting platform
+4. Update database connection strings
+5. Import recipe data using the import script
+
+## 🤝 Contributing
+
+We welcome contributions! Here's how you can help:
+
+### **Team Members**
+- **Dhananjay** - Frontend Developer & UI/UX Designer
+- **Likith** - Backend Developer & Database Architect  
+- **Utkarsh** - Full Stack Developer & DevOps Lead
+
+## 📝 License
+
+This project is part of an academic assignment for SIT725 - Applications Development.
+
+## 🙏 Acknowledgments
+
+- **TheMealDB** for providing the recipe API
+- **Materialize CSS** for the UI framework
+- **MongoDB** for the database solution
+- **Express.js** community for excellent documentation
+
+---
+
+**RemixMeals** - Turning leftovers into delicious meals, one ingredient at a time! 🍽️✨
 
 
